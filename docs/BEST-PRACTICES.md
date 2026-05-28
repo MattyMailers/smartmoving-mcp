@@ -252,6 +252,17 @@ UUIDs are case-insensitive. The API returns lowercase, but accepts any case. Nor
 
 ## Data Relationships
 
+### SmartMoving 1.0 vs 2.0 opportunity behavior
+
+SmartMoving exposes only the public `v1` API, but live iHaul iMove testing shows different behavior across opportunity/job models:
+
+- 1.0-style jobs can expose `estimatedCharges`, `actualCharges`, `estimatedMaterials`, and item-level `actualMaterials` from Premium job detail.
+- 2.0-style/type-4 jobs can expose stops, dates, notes, payments, documents, and audit activity while returning empty material/charge arrays from Premium job detail.
+- For 2.0-style jobs, `get_opportunity_audit` may show material total changes in plain English. Use this as a fallback signal, not item-level truth.
+- Standard opportunity embedded jobs may disagree with `get_jobs_by_opportunity` / Premium job detail on closed state. Trust the latter for write eligibility.
+
+See [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md).
+
 ### Entity Relationship Overview
 
 Understanding how entities relate to each other is essential for building correct integrations.

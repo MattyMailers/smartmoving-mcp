@@ -112,6 +112,32 @@ export function registerJobTools(server, client) {
             return { content: [{ type: "text", text: `Error: ${error.message ?? JSON.stringify(error)}` }], isError: true };
         }
     });
+    // ---------- get_job_notes ----------
+    server.tool("get_job_notes", "Read all note fields on a specific job. This calls Premium job detail with IncludeNotes=true and returns crew, customer, internal, accounting, dispatcher notes, plus crew feedback when present. Use this before update_job_notes so you don't accidentally replace existing note text.", {
+        opportunityId: z.string().uuid().describe("The opportunity ID"),
+        jobId: z.string().uuid().describe("The job ID"),
+    }, async (params) => {
+        try {
+            const job = await client.get(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`, { IncludeNotes: true });
+            const notes = (job.notes ?? {});
+            const result = {
+                jobId: params.jobId,
+                opportunityId: params.opportunityId,
+                closedAtUtc: job.closedAtUtc ?? null,
+                completedAtUtc: job.completedAtUtc ?? null,
+                crewNotes: notes.crewNotes ?? job.crewNotes ?? "",
+                customerNotes: notes.customerNotes ?? job.customerNotes ?? "",
+                internalNotes: notes.internalNotes ?? job.internalNotes ?? "",
+                accountingNotes: notes.accountingNotes ?? job.accountingNotes ?? "",
+                dispatcherNotes: notes.dispatcherNotes ?? job.dispatcherNotes ?? "",
+                crewFeedback: notes.crewFeedback ?? job.crewFeedback ?? "",
+            };
+            return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+        }
+        catch (error) {
+            return { content: [{ type: "text", text: `Error: ${error.message ?? JSON.stringify(error)}` }], isError: true };
+        }
+    });
     // ---------- update_job_notes ----------
     server.tool("update_job_notes", "Update one or more note fields on a specific job. Premium tier endpoint. SmartMoving PATCH updates the provided note properties only, but each provided field value replaces that field. To add text below existing notes, use append_job_note instead.", {
         opportunityId: z.string().uuid().describe("The opportunity ID"),
@@ -141,7 +167,13 @@ export function registerJobTools(server, client) {
         try {
             const job = await client.get(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`, { IncludeNotes: true });
             const notes = (job.notes ?? {});
-            const existing = typeof notes[params.field] === "string" ? notes[params.field] : "";
+            const existingFromNotes = notes[params.field];
+            const existingFromTopLevel = job[params.field];
+            const existing = typeof existingFromNotes === "string"
+                ? existingFromNotes
+                : typeof existingFromTopLevel === "string"
+                    ? existingFromTopLevel
+                    : "";
             const nextValue = existing.trim().length > 0 ? `${existing}\n\n${params.text}` : params.text;
             const result = await client.patch(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}/notes`, { [params.field]: nextValue });
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };

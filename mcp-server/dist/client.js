@@ -53,11 +53,18 @@ export class SmartMovingClient {
             };
             throw apiError;
         }
+        const text = await response.text();
+        // Some successful SmartMoving write endpoints return HTTP 200 with an empty body.
+        // Treat that as a successful empty object instead of an empty string so MCP tools
+        // don't look like they failed just because there was no response payload.
+        if (!text.trim()) {
+            return {};
+        }
         if (isJson) {
-            return (await response.json());
+            return JSON.parse(text);
         }
         // Some endpoints may return plain text
-        return (await response.text());
+        return text;
     }
     // -------------------------------------------------------------------------
     // Public HTTP methods

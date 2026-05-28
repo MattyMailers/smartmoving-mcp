@@ -60,7 +60,7 @@ On macOS, the config file is at:
 On Windows:
 `%APPDATA%\Claude\claude_desktop_config.json`
 
-## Available Tools (55 total)
+## Available Tools (62 total)
 
 ### Customer Tools (8)
 
@@ -102,7 +102,7 @@ On Windows:
 | `add_attachment` | Premium | Upload a file attachment |
 | `create_rooms` | Premium | Create rooms for inventory |
 
-### Job Tools (8)
+### Job Tools (10)
 
 | Tool | Tier | Description |
 |---|---|---|
@@ -111,7 +111,9 @@ On Windows:
 | `create_job` | Premium | Add a new job to an opportunity |
 | `delete_job` | Premium | Remove a job |
 | `confirm_job` | Premium | Confirm a scheduled job |
-| `update_job_notes` | Premium | Update job notes |
+| `get_job_notes` | Premium | Read job note fields without pulling full job payload |
+| `update_job_notes` | Premium | Replace provided job note fields |
+| `append_job_note` | Premium | Append to one job note field without erasing existing text |
 | `update_job_stops` | Premium | Replace all stops on a job |
 | `add_job_materials` | Premium | Add estimated materials to a job |
 
@@ -144,6 +146,23 @@ On Windows:
 |---|---|---|
 | `log_call` | Premium | Log a phone call on an opportunity |
 | `log_note` | Premium | Log a note on an opportunity |
+
+## Live-tested opportunity limitations
+
+SmartMoving exposes a public `v1` API, but live iHaul iMove jobs behave like two practical models:
+
+- **1.0-style jobs:** Premium `get_job` can return item-level `actualMaterials` plus charges when called with all include flags.
+- **2.0-style/type-4 jobs:** Premium `get_job` may return stops/dates/notes but empty `actualMaterials` and `actualCharges`, even when material updates exist in the UI. Use `get_opportunity_audit` to recover material-total change events.
+
+Recommended supply/revenue usage:
+
+1. Use `get_opportunity_by_quote` to find the opportunity.
+2. Use `get_jobs_by_opportunity` to match the exact job number and check authoritative `closedAtUtc`.
+3. Use `get_job` with `includeEstimatedCharges`, `includeActualCharges`, `includeEstimatedMaterials`, `includeActualMaterials`, `includeStops`, `includeNotes`, `includeDispatchInfo`, and `includeCharges` all enabled.
+4. If `actualMaterials` is empty, use `get_opportunity_audit` and parse material-total descriptions as fallback evidence.
+5. Use `log_note` for closed/2.0 opportunity notes. Use `update_job_notes` or `append_job_note` only when Premium job detail says the job is not closed.
+
+See `../docs/OPPORTUNITY-V1-V2-LIMITATIONS.md` for the tested `10356-2` vs `10701-3` behavior.
 
 ### Reference Data Tools (12)
 

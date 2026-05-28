@@ -10,6 +10,7 @@
 - [Enumerations](./ENUMS.md)
 - [Workflow Guides](./WORKFLOWS.md)
 - [Best Practices](./BEST-PRACTICES.md)
+- [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md)
 - [API Tiers](#api-tiers)
 - [Pagination](#pagination)
 - [Date Formats](#date-formats)
@@ -34,6 +35,8 @@ The SmartMoving External API v1 provides programmatic access to SmartMoving's mo
 | ID Format             | UUID (e.g., `3fa85f64-5717-4562-b3fc-2c963f66afa6`) |
 | Transport             | HTTPS only                                   |
 | Content Type          | `application/json`                           |
+
+**iHaul iMove live-test note:** the API is publicly `v1`, but opportunity/job behavior differs between older 1.0-style jobs and newer/type-4 2.0-style jobs. Check [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md) before building supply, material, or shrink reporting from SmartMoving data.
 
 ---
 

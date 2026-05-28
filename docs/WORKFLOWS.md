@@ -28,6 +28,8 @@ This guide describes the most common integration workflows using the SmartMoving
 
 **Tip:** Always start by loading reference data. Many create/update operations require IDs from reference data endpoints. Cache this data locally and refresh it periodically rather than fetching it on every request.
 
+**iHaul iMove note:** SmartMoving's public `v1` API has two practical opportunity/job behaviors. Some 1.0-style jobs expose charges and item-level `actualMaterials`; some 2.0-style/type-4 jobs expose payments, documents, stops, notes, and audit material-total changes but not item-level material lines. See [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md) before building supply/revenue reconciliation.
+
 ---
 
 ## Workflow 1: Lead-to-Opportunity Conversion
@@ -296,6 +298,8 @@ curl -X PUT \
 
 ### Step 3: Add Notes for the Crew
 
+Only use the job notes PATCH when the Premium job detail / jobs endpoint says the job is not closed. Closed jobs return `400 {"message":"Job is closed and cannot be updated."}`. If you only need to log an integration note on a closed or 2.0-style opportunity, use `POST /api/premium/opportunities/{opportunityId}/communication/notes` instead.
+
 ```bash
 curl -X PATCH \
   -H "x-api-key: YOUR_API_KEY" \
@@ -350,6 +354,15 @@ curl -X POST \
 curl -H "x-api-key: YOUR_API_KEY" \
   "https://api-public.smartmoving.com/v1/api/premium/opportunities/OPP_UUID/jobs/JOB_UUID?IncludeEstimatedCharges=true&IncludeEstimatedMaterials=true&IncludeStops=true"
 ```
+
+For supply/revenue reconciliation, include all tested flags:
+
+```bash
+curl -H "x-api-key: YOUR_API_KEY" \
+  "https://api-public.smartmoving.com/v1/api/premium/opportunities/OPP_UUID/jobs/JOB_UUID?IncludeEstimatedCharges=true&IncludeActualCharges=true&IncludeEstimatedMaterials=true&IncludeActualMaterials=true&IncludeStops=true&IncludeNotes=true&IncludeDispatchInfo=true&IncludeCharges=true"
+```
+
+If `actualMaterials` is empty on a type-4/2.0-style job, fetch `GET /api/opportunities/OPP_UUID/audit-activity` and parse material-total changes as a fallback signal.
 
 ---
 

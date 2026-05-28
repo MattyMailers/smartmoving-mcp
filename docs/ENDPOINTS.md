@@ -640,6 +640,8 @@ curl -X PUT \
 
 Get detailed opportunity information. Use `Include*` query parameters to control which related data is returned.
 
+**Live API warning:** this standard opportunity view can show embedded jobs differently than Premium job detail. In live tests, a reopened type-4 job appeared with `closedAtUtc: null` here while `GET /api/opportunities/{opportunityId}/jobs` and Premium job detail still showed it closed and blocked notes writes. For write eligibility, trust the jobs endpoint / Premium job detail.
+
 **Tier:** Basic
 
 **Path Parameters:**
@@ -707,6 +709,8 @@ curl -H "x-api-key: YOUR_API_KEY" \
 
 Get the audit trail for an opportunity, showing all changes.
 
+**Supply/revenue fallback:** for 2.0-style/type-4 opportunities where Premium job detail returns empty `actualMaterials`/`actualCharges`, audit activity may still expose material total movements in descriptions, e.g. `Materials updated on Moving And Packing job. Old total: $0.00, new total: $510.50.` This is not item-level supply truth, but it is useful for leakage detection.
+
 **Tier:** Basic
 
 **Path Parameters:**
@@ -729,6 +733,8 @@ curl -H "x-api-key: YOUR_API_KEY" \
 ### GET /api/opportunities/{opportunityId}/jobs
 
 Get all jobs for an opportunity.
+
+**Use for state checks:** this endpoint has proven more authoritative than embedded jobs from `GET /api/opportunities/{opportunityId}` for `completedAtUtc` / `closedAtUtc` when deciding whether Premium job note writes will succeed.
 
 **Tier:** Basic
 
