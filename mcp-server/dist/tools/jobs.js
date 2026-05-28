@@ -44,6 +44,9 @@ export function registerJobTools(server, client) {
         includeEstimatedMaterials: z.boolean().optional().default(false).describe("Include estimated materials/supplies"),
         includeActualMaterials: z.boolean().optional().default(false).describe("Include actual materials/supplies sold or used"),
         includeStops: z.boolean().optional().default(false).describe("Include pickup/dropoff stops"),
+        includeDispatchInfo: z.boolean().optional().default(false).describe("Include dispatch/crew info"),
+        includeCharges: z.boolean().optional().default(false).describe("Official SmartMoving catch-all IncludeCharges flag"),
+        includeNotes: z.boolean().optional().default(false).describe("Include crew/customer/internal/accounting/dispatcher notes"),
     }, async (params) => {
         try {
             const result = await client.get(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`, {
@@ -52,6 +55,9 @@ export function registerJobTools(server, client) {
                 IncludeEstimatedMaterials: params.includeEstimatedMaterials,
                 IncludeActualMaterials: params.includeActualMaterials,
                 IncludeStops: params.includeStops,
+                IncludeDispatchInfo: params.includeDispatchInfo,
+                IncludeCharges: params.includeCharges,
+                IncludeNotes: params.includeNotes,
             });
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         }
