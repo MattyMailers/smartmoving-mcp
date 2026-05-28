@@ -49,14 +49,25 @@ export function registerJobTools(server: McpServer, client: SmartMovingClient): 
   // ---------- get_job ----------
   server.tool(
     "get_job",
-    "Get detailed information about a specific job within an opportunity. Premium tier endpoint. Returns job type, date, crew, truck, hours, stops, materials, and crew member assignments.",
+    "Get detailed information about a specific job within an opportunity. Premium tier endpoint. Can include estimated/actual charges, estimated/actual materials, and stops. Use IncludeActualMaterials=true to pull supplies sold/used on completed jobs.",
     {
       opportunityId: z.string().uuid().describe("The opportunity ID"),
       jobId: z.string().uuid().describe("The job ID"),
+      includeEstimatedCharges: z.boolean().optional().default(false).describe("Include estimated charge lines"),
+      includeActualCharges: z.boolean().optional().default(false).describe("Include actual charge lines"),
+      includeEstimatedMaterials: z.boolean().optional().default(false).describe("Include estimated materials/supplies"),
+      includeActualMaterials: z.boolean().optional().default(false).describe("Include actual materials/supplies sold or used"),
+      includeStops: z.boolean().optional().default(false).describe("Include pickup/dropoff stops"),
     },
     async (params) => {
       try {
-        const result = await client.get(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`);
+        const result = await client.get(`/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`, {
+          IncludeEstimatedCharges: params.includeEstimatedCharges,
+          IncludeActualCharges: params.includeActualCharges,
+          IncludeEstimatedMaterials: params.includeEstimatedMaterials,
+          IncludeActualMaterials: params.includeActualMaterials,
+          IncludeStops: params.includeStops,
+        });
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${(error as Error).message ?? JSON.stringify(error)}` }], isError: true };

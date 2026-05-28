@@ -38,11 +38,11 @@ export function registerCustomerTools(server, client) {
     }, async (params) => {
         try {
             const result = await client.get("/api/customers", {
-                page: params.page,
-                pageSize: params.pageSize,
-                fromServiceDate: params.fromServiceDate,
-                toServiceDate: params.toServiceDate,
-                includeOpportunityInfo: params.includeOpportunityInfo,
+                Page: params.page,
+                PageSize: params.pageSize,
+                FromServiceDate: params.fromServiceDate,
+                ToServiceDate: params.toServiceDate,
+                IncludeOpportunityInfo: params.includeOpportunityInfo,
             });
             return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
         }
