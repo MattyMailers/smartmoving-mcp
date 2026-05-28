@@ -146,17 +146,52 @@ export function registerJobTools(server: McpServer, client: SmartMovingClient): 
   // ---------- update_job_notes ----------
   server.tool(
     "update_job_notes",
-    "Update the notes on a specific job. Premium tier endpoint. Use this to add or change special instructions, access codes, or other job-specific notes.",
+    "Update one or more note fields on a specific job. Premium tier endpoint. SmartMoving PATCH updates the provided note properties only, but each provided field value replaces that field. To add text below existing notes, use append_job_note instead.",
     {
       opportunityId: z.string().uuid().describe("The opportunity ID"),
       jobId: z.string().uuid().describe("The job ID"),
-      notes: z.string().describe("New notes content (replaces existing notes)"),
+      crewNotes: z.string().optional().describe("Crew notes. Replaces the existing crewNotes field if provided."),
+      customerNotes: z.string().optional().describe("Customer notes. Replaces the existing customerNotes field if provided."),
+      internalNotes: z.string().optional().describe("Internal notes. Replaces the existing internalNotes field if provided."),
+      accountingNotes: z.string().optional().describe("Accounting notes. Replaces the existing accountingNotes field if provided."),
+      dispatcherNotes: z.string().optional().describe("Dispatcher notes. Replaces the existing dispatcherNotes field if provided."),
     },
     async (params) => {
       try {
+        const { opportunityId, jobId, ...body } = params;
+        const result = await client.patch(
+          `/api/premium/opportunities/${opportunityId}/jobs/${jobId}/notes`,
+          body,
+        );
+        return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
+      } catch (error) {
+        return { content: [{ type: "text", text: `Error: ${(error as Error).message ?? JSON.stringify(error)}` }], isError: true };
+      }
+    },
+  );
+
+  // ---------- append_job_note ----------
+  server.tool(
+    "append_job_note",
+    "Append text below an existing job note field without erasing the prior content. This reads the current notes, adds a blank line plus the new text, then PATCHes only the selected note field. Fails if the job is closed or SmartMoving rejects note updates.",
+    {
+      opportunityId: z.string().uuid().describe("The opportunity ID"),
+      jobId: z.string().uuid().describe("The job ID"),
+      field: z.enum(["crewNotes", "customerNotes", "internalNotes", "accountingNotes", "dispatcherNotes"]).describe("Which note field to append to"),
+      text: z.string().min(1).describe("Text to append below the existing note"),
+    },
+    async (params) => {
+      try {
+        const job = await client.get<Record<string, unknown>>(
+          `/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}`,
+          { IncludeNotes: true },
+        );
+        const notes = (job.notes ?? {}) as Record<string, unknown>;
+        const existing = typeof notes[params.field] === "string" ? notes[params.field] as string : "";
+        const nextValue = existing.trim().length > 0 ? `${existing}\n\n${params.text}` : params.text;
         const result = await client.patch(
           `/api/premium/opportunities/${params.opportunityId}/jobs/${params.jobId}/notes`,
-          { notes: params.notes },
+          { [params.field]: nextValue },
         );
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
