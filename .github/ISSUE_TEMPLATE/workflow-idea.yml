@@ -1,0 +1,46 @@
+name: Workflow idea
+description: Suggest an agent workflow or compound tool this repo should support.
+title: "Workflow idea: "
+labels: ["workflow idea", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Share the moving-company workflow you wish an AI agent could handle. Use fake examples only.
+  - type: textarea
+    id: workflow
+    attributes:
+      label: Workflow
+      description: What should the agent be able to do end-to-end?
+      placeholder: "Example: find jobs from last week where materials were used but not billed, then summarize estimated revenue leakage."
+    validations:
+      required: true
+  - type: textarea
+    id: value
+    attributes:
+      label: Why it matters
+      description: What operational problem does this solve?
+    validations:
+      required: true
+  - type: textarea
+    id: inputs
+    attributes:
+      label: Inputs and expected output
+      description: What should the user provide, and what should the tool/report return?
+      placeholder: "Input: date range, branch. Output: list of jobs, missing materials, estimated lost revenue."
+    validations:
+      required: false
+  - type: textarea
+    id: caveats
+    attributes:
+      label: Known SmartMoving caveats
+      description: Any endpoints, fields, permissions, or account model quirks that might affect this?
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I used fake examples only and did not include private CRM data.
+          required: true

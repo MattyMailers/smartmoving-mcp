@@ -1,0 +1,8 @@
+blank_issues_enabled: true
+contact_links:
+  - name: Contribution guide
+    url: https://github.com/MattyMailers/smartmoving-mcp/blob/main/CONTRIBUTING.md
+    about: Read how to fork, contribute, submit PRs, and share feedback.
+  - name: AI agent contribution guide
+    url: https://github.com/MattyMailers/smartmoving-mcp/blob/main/AGENTS.md
+    about: Instructions for using Claude Code, Codex, Cursor, OpenCode, Hermes Agent, or other agents to contribute safely.

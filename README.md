@@ -107,6 +107,15 @@ Before using this as supply or revenue truth, read [`docs/OPPORTUNITY-V1-V2-LIMI
 
 ## Contribution model
 
+This project is meant to improve over time with feedback from operators, developers, and AI-agent builders.
+
+Ways to help:
+
+1. Open an issue for bugs, missing endpoints, confusing tool descriptions, install problems, or SmartMoving API quirks.
+2. Share workflows your agent should be able to run, such as quote prep, dispatch summaries, billing checks, supply reconciliation, or revenue leakage reports.
+3. Fork the repo, make a focused change, and submit a pull request.
+4. Use your own AI coding agent to draft improvements, then review the diff before opening a PR.
+
 Recommended open-source workflow:
 
 1. Keep `main` protected.
@@ -114,9 +123,11 @@ Recommended open-source workflow:
 3. They open pull requests from their fork.
 4. GitHub Actions runs build/audit/tests.
 5. Maintainers review and merge.
-6. Issues are used for bugs, missing endpoints, and SmartMoving API quirks.
+6. Issues are used for bugs, missing endpoints, agent feedback, and SmartMoving API quirks.
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md) and [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+AI-agent-assisted contributions are welcome from Claude Code, Codex, Cursor, OpenCode, Hermes Agent, or any MCP-capable coding workflow. Agents can draft patches. Humans should still review before submitting.
+
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), and [`docs/ROADMAP.md`](./docs/ROADMAP.md).
 
 ## License
 

@@ -4,6 +4,8 @@ Thanks for helping improve the SmartMoving MCP server. This project exists so AI
 
 ## Contribution workflow
 
+You can contribute with code, docs, agent feedback, or plain operational notes. If something is missing, confusing, or fragile, open an issue. If you already know the fix, fork the repo and send a pull request.
+
 1. Fork the repository.
 2. Create a branch from `main`.
 3. Make your change.
@@ -11,9 +13,22 @@ Thanks for helping improve the SmartMoving MCP server. This project exists so AI
 5. Open a pull request.
 6. A maintainer reviews, requests changes if needed, then merges.
 
+AI-agent-assisted contributions are welcome. You may use Claude Code, Codex, Cursor, OpenCode, Hermes Agent, or another coding agent to draft changes. Please review generated code before submitting. Agents can write the patch, but the human contributor owns the PR.
+
 Maintainers should keep `main` protected and require pull requests for external contributions.
 
+For agent-specific repo instructions, see [`AGENTS.md`](./AGENTS.md).
+
 ## Good first contributions
+
+No code required:
+
+- Report confusing install steps.
+- Report tools your agent could not discover or use correctly.
+- Suggest workflows that would save time in sales, dispatch, billing, inventory, or follow-ups.
+- Document SmartMoving API quirks discovered from real use, using fake examples only.
+
+Code/docs contributions:
 
 - Add missing SmartMoving endpoints as MCP tools.
 - Add mocked tests for existing tools.

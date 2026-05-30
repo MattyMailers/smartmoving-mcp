@@ -1,0 +1,46 @@
+name: Agent feedback
+description: Tell us how your AI agent used, failed to use, or could better use this MCP server.
+title: "Agent feedback: "
+labels: ["agent feedback", "help wanted"]
+body:
+  - type: markdown
+    attributes:
+      value: |
+        Thanks for testing SmartMoving MCP with your agent. Please use fake data only. Do not include API keys, customer names, phone numbers, addresses, quote numbers, screenshots, or raw CRM responses.
+  - type: input
+    id: agent
+    attributes:
+      label: Agent/client used
+      description: Claude Desktop, Claude Code, Codex, Cursor, OpenCode, Hermes Agent, etc.
+      placeholder: "Example: Claude Code with MCP stdio"
+    validations:
+      required: true
+  - type: textarea
+    id: goal
+    attributes:
+      label: What were you trying to do?
+      description: Describe the workflow or question you wanted your agent to handle.
+      placeholder: "Example: prepare a dispatch summary for tomorrow's jobs."
+    validations:
+      required: true
+  - type: textarea
+    id: outcome
+    attributes:
+      label: What happened?
+      description: Did the agent succeed, get confused, call the wrong tool, miss data, or need a tool that does not exist?
+    validations:
+      required: true
+  - type: textarea
+    id: improvement
+    attributes:
+      label: What would make this better?
+      description: Suggest better tool names, descriptions, workflow tools, docs, examples, or safety guardrails.
+    validations:
+      required: false
+  - type: checkboxes
+    id: safety
+    attributes:
+      label: Safety check
+      options:
+        - label: I did not include API keys, real customer data, screenshots with private CRM data, or raw production API responses.
+          required: true
