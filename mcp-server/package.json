@@ -2,6 +2,20 @@
   "name": "smartmoving-mcp-server",
   "version": "1.0.0",
   "description": "MCP Server for SmartMoving External API - Moving Company CRM",
+  "license": "MIT",
+  "repository": {
+    "type": "git",
+    "url": "git+https://github.com/MattyMailers/smartmoving-mcp.git",
+    "directory": "mcp-server"
+  },
+  "keywords": [
+    "mcp",
+    "model-context-protocol",
+    "smartmoving",
+    "moving-company",
+    "crm",
+    "ai-agents"
+  ],
   "main": "dist/index.js",
   "type": "module",
   "bin": {
@@ -10,7 +24,8 @@
   "scripts": {
     "build": "tsc",
     "start": "node dist/index.js",
-    "dev": "tsx src/index.ts"
+    "dev": "tsx src/index.ts",
+    "verify": "npm run build && npm audit --audit-level=high"
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
