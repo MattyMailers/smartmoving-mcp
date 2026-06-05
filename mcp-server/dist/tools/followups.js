@@ -29,12 +29,14 @@ export function registerFollowUpTools(server, client) {
         }
     });
     // ---------- create_followup ----------
-    server.tool("create_followup", "Create a new follow-up task on an opportunity. Premium tier endpoint. Use this to schedule a callback, email, text, or in-home estimate. Types: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET (Customer Move Estimate/Tour).", {
-        opportunityId: z.string().uuid().describe("The opportunity ID"),
-        followUpType: z.number().int().min(0).max(4).describe("Follow-up type: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET"),
-        dueDate: z.string().describe("When the follow-up is due (ISO 8601 datetime, e.g. '2024-06-15T10:00:00')"),
+    server.tool("create_followup", "Create a new follow-up task on an OPPORTUNITY. SmartMoving does not support lead-level follow-ups through this endpoint: convert the lead to an opportunity first. Use this to schedule a callback, email, text, or in-home estimate. Types: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET. Required API field names are type, title, assignedToId, and dueDateTime.", {
+        opportunityId: z.string().uuid().describe("The opportunity ID. Follow-ups are opportunity-only, not lead-level."),
+        type: z.number().int().min(0).max(4).describe("Follow-up type: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET"),
+        title: z.string().min(1).max(100).describe("Follow-up title, max 100 characters"),
+        assignedToId: z.string().uuid().describe("User ID to assign the follow-up to (use get_users for IDs)"),
+        dueDateTime: z.string().describe("When the follow-up is due (ISO 8601 datetime, e.g. '2026-06-05T09:00:00-06:00')"),
         notes: z.string().optional().describe("Notes about what to discuss or do"),
-        assignedToId: z.string().uuid().optional().describe("User ID to assign the follow-up to (use get_users for IDs)"),
+        completed: z.boolean().optional().default(false).describe("Whether the follow-up is already completed; normally false when scheduling a reminder"),
     }, async (params) => {
         try {
             const { opportunityId, ...body } = params;

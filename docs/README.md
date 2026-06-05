@@ -9,6 +9,7 @@
 - [Data Schemas](./SCHEMAS.md)
 - [Enumerations](./ENUMS.md)
 - [Workflow Guides](./WORKFLOWS.md)
+- [Agent Workflow Notes](./AGENT_WORKFLOWS.md)
 - [Best Practices](./BEST-PRACTICES.md)
 - [AI Agent Install Guide](./AGENT-INSTALL.md)
 - [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md)

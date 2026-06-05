@@ -33,6 +33,18 @@ const addressSchema = z.object({
   apartmentNumber: z.string().optional(),
 });
 
+const geocodedAddressSchema = z.object({
+  fullAddress: z.string().optional(),
+  street: z.string().optional(),
+  unit: z.string().optional(),
+  city: z.string().optional(),
+  state: z.string().optional(),
+  zip: z.string().optional(),
+  lat: z.number().optional(),
+  lng: z.number().optional(),
+  country: z.string().optional(),
+});
+
 export function registerLeadTools(server: McpServer, client: SmartMovingClient): void {
   // ---------- list_leads ----------
   server.tool(
@@ -189,18 +201,24 @@ export function registerLeadTools(server: McpServer, client: SmartMovingClient):
   // ---------- convert_lead_to_opportunity ----------
   server.tool(
     "convert_lead_to_opportunity",
-    "Convert a lead into an opportunity. Premium tier endpoint. This transitions a lead from the initial inquiry stage into a full opportunity/quote that can be worked, priced, and booked. The lead record is consumed and an opportunity is created.",
+    "Convert a lead into an opportunity. Premium tier endpoint. SmartMoving requires a complete conversion payload, not just the lead ID: customerId, referralSourceId, tariffId, moveDate, moveSizeId, salesPersonId, and serviceTypeId are required. Use search_customers/create_customer, get_referral_sources, get_tariffs, get_move_sizes, get_users, and get_service_types first. Follow-up reminders can only be created after this conversion because follow-ups are opportunity-only.",
     {
       leadId: z.string().uuid().describe("The lead ID to convert"),
-      salesPersonId: z.string().uuid().optional().describe("Optional salesperson to assign the new opportunity to"),
+      customerId: z.string().uuid().describe("Required customer ID. Search or create the customer first."),
+      referralSourceId: z.string().uuid().describe("Required referral source ID"),
+      tariffId: z.string().uuid().describe("Required tariff/rate sheet ID"),
+      branchId: z.string().uuid().optional().describe("Branch ID"),
+      moveDate: z.string().describe("Required move date in yyyy-MM-dd format; must be today or future"),
+      moveSizeId: z.string().uuid().describe("Required move size ID"),
+      salesPersonId: z.string().uuid().describe("Required salesperson/user ID"),
+      serviceTypeId: z.number().int().describe("Required service type/job type ID; e.g. 1=Moving"),
+      originAddress: geocodedAddressSchema.optional().describe("Optional origin address using SmartMoving's GeocodedAddress fields: fullAddress, street, unit, city, state, zip, lat, lng, country"),
+      destinationAddress: geocodedAddressSchema.optional().describe("Optional destination address using SmartMoving's GeocodedAddress fields"),
     },
     async (params) => {
       try {
-        const body: Record<string, unknown> = {};
-        if (params.salesPersonId) {
-          body.salesPersonId = params.salesPersonId;
-        }
-        const result = await client.put(`/api/premium/lead/${params.leadId}/convert`, body);
+        const { leadId, ...body } = params;
+        const result = await client.put(`/api/premium/lead/${leadId}/convert`, body);
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
         return { content: [{ type: "text", text: `Error: ${(error as Error).message ?? JSON.stringify(error)}` }], isError: true };
