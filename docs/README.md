@@ -11,6 +11,7 @@
 - [Workflow Guides](./WORKFLOWS.md)
 - [Best Practices](./BEST-PRACTICES.md)
 - [AI Agent Install Guide](./AGENT-INSTALL.md)
+- [Release Process](./RELEASE.md)
 - [Opportunity 1.0 vs 2.0 Limitations](./OPPORTUNITY-V1-V2-LIMITATIONS.md)
 - [Roadmap](./ROADMAP.md)
 - [API Tiers](#api-tiers)

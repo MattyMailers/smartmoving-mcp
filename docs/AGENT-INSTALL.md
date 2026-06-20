@@ -1,6 +1,8 @@
 # Install SmartMoving MCP in AI agents
 
-This server is a local stdio MCP server. Your AI agent launches `node /absolute/path/to/mcp-server/dist/index.js`, passes `SMARTMOVING_API_KEY` privately through environment variables, then discovers the SmartMoving tools.
+This server is a local stdio MCP server. Your AI agent launches either `npx smartmoving-mcp-server` after the package is published, or `node /absolute/path/to/mcp-server/dist/index.js` from a local clone. The agent passes `SMARTMOVING_API_KEY` privately through environment variables, then discovers the SmartMoving tools.
+
+Start in read-only mode. Enable writes only after you trust the workflow.
 
 ## Build once
 
@@ -17,10 +19,44 @@ Use an absolute path in client configs. Example:
 /Users/you/dev/smartmoving-mcp/mcp-server/dist/index.js
 ```
 
+## NPM/npx install, recommended after public package release
+
+Once `smartmoving-mcp-server` is published to npm, MCP clients can launch it without cloning the repo:
+
+```json
+{
+  "mcpServers": {
+    "smartmoving": {
+      "command": "npx",
+      "args": ["-y", "smartmoving-mcp-server"],
+      "env": {
+        "SMARTMOVING_API_KEY": "replace-with-your-key",
+        "SMARTMOVING_ALLOW_WRITES": "false"
+      }
+    }
+  }
+}
+```
+
+To allow create/update tools later, add:
+
+```json
+"SMARTMOVING_ALLOW_WRITES": "true"
+```
+
+To allow delete-style tools too, add both:
+
+```json
+"SMARTMOVING_ALLOW_WRITES": "true",
+"SMARTMOVING_ALLOW_DESTRUCTIVE": "true"
+```
+
 ## Required environment
 
 - `SMARTMOVING_API_KEY`: required. Never commit this.
 - `SMARTMOVING_BASE_URL`: optional. Defaults to `https://api-public.smartmoving.com/v1`.
+- `SMARTMOVING_ALLOW_WRITES`: optional. Set to `true` to allow POST, PUT, and PATCH tools. Defaults to read-only.
+- `SMARTMOVING_ALLOW_DESTRUCTIVE`: optional. Set to `true` to allow DELETE tools. Requires writes too.
 
 Recommended secret pattern:
 

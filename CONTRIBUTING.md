@@ -6,6 +6,8 @@ Thanks for helping improve the SmartMoving MCP server. This project exists so AI
 
 You can contribute with code, docs, agent feedback, or plain operational notes. If something is missing, confusing, or fragile, open an issue. If you already know the fix, fork the repo and send a pull request.
 
+You do **not** need to be a programmer to help. SmartMoving operators can contribute by describing workflows, reporting missing fields, or explaining where an AI agent got confused.
+
 1. Fork the repository.
 2. Create a branch from `main`.
 3. Make your change.
@@ -18,6 +20,38 @@ AI-agent-assisted contributions are welcome. You may use Claude Code, Codex, Cur
 Maintainers should keep `main` protected and require pull requests for external contributions.
 
 For agent-specific repo instructions, see [`AGENTS.md`](./AGENTS.md).
+
+## Ways to contribute
+
+### Report a bug
+
+Open a bug issue when a tool returns the wrong data, an endpoint fails, an MCP client cannot install the server, or an agent misunderstands how to use a tool.
+
+Include:
+
+- MCP client used, such as Claude Desktop, Cursor, Codex, Hermes Agent, or OpenClaw.
+- Tool name.
+- What you expected.
+- What actually happened.
+- Safe synthetic sample data only.
+
+### Request a missing endpoint
+
+Open a missing-endpoint issue with:
+
+- SmartMoving endpoint path or docs link, if known.
+- Whether it is Basic or Premium API, if known.
+- The moving-company workflow it supports.
+- Fake example request/response shapes.
+- Why an AI agent would need it.
+
+### Suggest an agent workflow
+
+Open a workflow idea issue for operator workflows such as daily dispatch summaries, stale follow-up reports, quote prep packets, job closeout review, unpaid balance checks, supply/revenue reconciliation, or customer dispute packets.
+
+### Submit code
+
+Fork the repo, create a focused branch, add tests/docs, and open a PR. Small PRs are much easier to review than giant "agent did everything" PRs.
 
 ## Good first contributions
 
@@ -44,6 +78,7 @@ git clone https://github.com/MattyMailers/smartmoving-mcp.git
 cd smartmoving-mcp/mcp-server
 npm install
 npm run build
+npm test
 npm audit --audit-level=high
 ```
 
@@ -63,6 +98,7 @@ Use placeholders in docs and tests.
 Before opening a PR:
 
 - [ ] `npm run build` passes from `mcp-server/`.
+- [ ] `npm test` passes from `mcp-server/`.
 - [ ] `npm audit --audit-level=high` passes or the PR explains why not.
 - [ ] New tools include Zod schemas with useful descriptions.
 - [ ] New tools return JSON text through MCP content blocks.
@@ -83,7 +119,7 @@ Every tool should have:
 
 ## Testing direction
 
-The repo currently relies on TypeScript build and npm audit. The next serious upgrade is a mocked test suite:
+The repo has a starter Vitest harness for the SmartMoving HTTP client and safety gates. The next serious upgrade is expanding mocked coverage across every tool module:
 
 - Mock `SmartMovingClient` for each tool module.
 - Assert correct endpoint paths and query parameter casing.

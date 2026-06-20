@@ -2,7 +2,7 @@
 
 SmartMoving MCP Server exposes the SmartMoving External API v1 as MCP tools for AI agents. It lets Claude Desktop, Claude Code, Codex, Hermes Agent, OpenClaw, and other MCP-compatible agents read and update a moving-company CRM through a local stdio server.
 
-Current status: private repo, production-used internally at iHaul iMove, prepared for eventual open-source release.
+Current status: release-prep branch for first public `0.1.0` launch. Production-used internally at iHaul iMove, with safety gates added for external adopters.
 
 ## What it can do
 
@@ -45,6 +45,14 @@ smartmoving-api/
 
 ## Quick start
 
+The easiest public install path is npm/npx:
+
+```bash
+npx smartmoving-mcp-server
+```
+
+For local development from source:
+
 ```bash
 git clone https://github.com/MattyMailers/smartmoving-mcp.git
 cd smartmoving-mcp/mcp-server
@@ -52,10 +60,38 @@ npm install
 npm run build
 
 export SMARTMOVING_API_KEY="replace-with-your-key"
+export SMARTMOVING_ALLOW_WRITES="false"
 npm start
 ```
 
 The server uses stdio, so it is normally launched by an MCP client rather than run manually in a terminal.
+
+## Safety modes
+
+The public server is designed to be safe on first install:
+
+- Read operations are always available with a valid `SMARTMOVING_API_KEY`.
+- POST, PUT, and PATCH requests are blocked unless `SMARTMOVING_ALLOW_WRITES=true`.
+- DELETE requests are blocked unless both `SMARTMOVING_ALLOW_WRITES=true` and `SMARTMOVING_ALLOW_DESTRUCTIVE=true`.
+
+Recommended first-run config:
+
+```bash
+SMARTMOVING_API_KEY="replace-with-your-key"
+SMARTMOVING_ALLOW_WRITES="false"
+```
+
+Only enable writes after you trust the agent workflow:
+
+```bash
+SMARTMOVING_ALLOW_WRITES="true"
+```
+
+Only enable destructive operations when you intentionally want delete-style tools available:
+
+```bash
+SMARTMOVING_ALLOW_DESTRUCTIVE="true"
+```
 
 ## Secrets and API keys
 
@@ -71,6 +107,8 @@ The repo ignores `.env` and `.env.local`. The server only reads:
 
 - `SMARTMOVING_API_KEY`, required
 - `SMARTMOVING_BASE_URL`, optional override
+- `SMARTMOVING_ALLOW_WRITES`, optional. Set to `true` to allow POST, PUT, and PATCH tools. Defaults to read-only.
+- `SMARTMOVING_ALLOW_DESTRUCTIVE`, optional. Set to `true` to allow DELETE tools. Requires writes to be enabled too.
 
 Matt's local key is stored privately in `~/.hermes/.env`, not in this repo.
 
@@ -91,10 +129,11 @@ Use [`docs/AGENT-INSTALL.md`](./docs/AGENT-INSTALL.md) for copy-paste setup exam
 cd mcp-server
 npm install
 npm run build
+npm test
 npm audit --audit-level=high
 ```
 
-There is no dedicated test suite yet. TypeScript build plus npm audit are the current verification gates. The highest-value next step is adding mocked HTTP-client tests around every tool module.
+There is now a small mocked test harness for the SmartMoving HTTP client and safety gates. The highest-value next step is expanding mocked tests across every tool module.
 
 ## SmartMoving caveat discovered from live use
 
@@ -127,7 +166,7 @@ Recommended open-source workflow:
 
 AI-agent-assisted contributions are welcome from Claude Code, Codex, Cursor, OpenCode, Hermes Agent, or any MCP-capable coding workflow. Agents can draft patches. Humans should still review before submitting.
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), and [`docs/ROADMAP.md`](./docs/ROADMAP.md).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), [`docs/ROADMAP.md`](./docs/ROADMAP.md), [`docs/RELEASE.md`](./docs/RELEASE.md), and [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## License
 

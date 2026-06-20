@@ -41,6 +41,11 @@ async function main(): Promise<void> {
   }
 
   const baseUrl = process.env.SMARTMOVING_BASE_URL; // optional override
+  const truthyValues = new Set(["1", "true", "yes", "on"]);
+  const envFlag = (name: string): boolean => {
+    const value = process.env[name];
+    return value ? truthyValues.has(value.trim().toLowerCase()) : false;
+  };
 
   // ---------------------------------------------------------------------------
   // Initialize the SmartMoving HTTP client
@@ -48,6 +53,8 @@ async function main(): Promise<void> {
   const client = new SmartMovingClient({
     apiKey,
     baseUrl,
+    allowWrites: envFlag("SMARTMOVING_ALLOW_WRITES"),
+    allowDestructive: envFlag("SMARTMOVING_ALLOW_DESTRUCTIVE"),
   });
 
   // ---------------------------------------------------------------------------
@@ -55,7 +62,7 @@ async function main(): Promise<void> {
   // ---------------------------------------------------------------------------
   const server = new McpServer({
     name: "smartmoving",
-    version: "1.0.0",
+    version: "0.1.0",
     description:
       "MCP server for the SmartMoving External API v1. " +
       "Provides tools for managing customers, leads, opportunities, jobs, " +

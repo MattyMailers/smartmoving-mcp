@@ -1,13 +1,18 @@
 export interface SmartMovingClientOptions {
     apiKey: string;
     baseUrl?: string;
+    allowWrites?: boolean;
+    allowDestructive?: boolean;
 }
 export declare class SmartMovingClient {
     private readonly apiKey;
     private readonly baseUrl;
+    private readonly allowWrites;
+    private readonly allowDestructive;
     constructor(options: SmartMovingClientOptions);
     private buildUrl;
     private defaultHeaders;
+    private assertWritesAllowed;
     private handleResponse;
     get<T = unknown>(path: string, queryParams?: Record<string, string | number | boolean | null | undefined>): Promise<T>;
     post<T = unknown>(path: string, body?: unknown, queryParams?: Record<string, string | number | boolean | null | undefined>): Promise<T>;
