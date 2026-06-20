@@ -1,8 +1,10 @@
 # SmartMoving MCP Server
 
-SmartMoving MCP Server exposes the SmartMoving External API v1 as MCP tools for AI agents. It lets Claude Desktop, Claude Code, Codex, Hermes Agent, OpenClaw, and other MCP-compatible agents read and update a moving-company CRM through a local stdio server.
+> **Unofficial project.** SmartMoving MCP Server is an independent, community-maintained MCP bridge for the SmartMoving External API. It is not affiliated with, endorsed by, sponsored by, or certified by SmartMoving, LLC or its affiliates. "SmartMoving" is used only to identify the external API this project interoperates with. See [`NOTICE.md`](./NOTICE.md).
 
-Current status: release-prep branch for first public `0.1.0` launch. Production-used internally at iHaul iMove, with safety gates added for external adopters.
+SmartMoving MCP Server exposes the SmartMoving External API v1 as MCP tools for AI agents. It lets Claude Desktop, Claude Code, Codex, Hermes Agent, OpenClaw, and other MCP-compatible agents read and update a moving-company CRM through a local stdio server using API credentials supplied by an authorized SmartMoving customer.
+
+Current status: public `0.1.0` launch. Production-used internally at iHaul iMove, with safety gates added for external adopters.
 
 ## What it can do
 
@@ -174,3 +176,5 @@ See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), [`docs/F
 ## License
 
 MIT. See [`LICENSE`](./LICENSE).
+
+The MIT license covers this repository's original code and documentation. It does **not** grant rights to SmartMoving's product, platform, API documentation, trademarks, logos, or customer data. See [`NOTICE.md`](./NOTICE.md).

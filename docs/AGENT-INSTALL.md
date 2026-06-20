@@ -1,5 +1,7 @@
 # Install SmartMoving MCP in AI agents
 
+> **Unofficial project.** This is an independent MCP bridge for authorized SmartMoving customers and their agents. It is not affiliated with or endorsed by SmartMoving, LLC. Use your own authorized API key and follow your SmartMoving agreement.
+
 This server is a local stdio MCP server. Your AI agent launches either `npx smartmoving-mcp-server` after the package is published, or `node /absolute/path/to/mcp-server/dist/index.js` from a local clone. The agent passes `SMARTMOVING_API_KEY` privately through environment variables, then discovers the SmartMoving tools.
 
 Start in read-only mode. Enable writes only after you trust the workflow.
