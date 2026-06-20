@@ -6,18 +6,44 @@ import { ApiError } from "./types.js";
 
 const DEFAULT_BASE_URL = "https://api-public.smartmoving.com/v1";
 
+const TRUTHY_VALUES = new Set(["1", "true", "yes", "on"]);
+
+function envFlag(name: string): boolean {
+  const value = process.env[name];
+  return value ? TRUTHY_VALUES.has(value.trim().toLowerCase()) : false;
+}
+
+function redactSecrets(value: string, apiKey?: string): string {
+  let redacted = value;
+
+  if (apiKey) {
+    redacted = redacted.split(apiKey).join("[REDACTED_API_KEY]");
+  }
+
+  return redacted
+    .replace(/(x-api-key\s*[:=]\s*)[^\s,"'}]+/gi, "$1[REDACTED]")
+    .replace(/(api[-_ ]?key\s*[:=]\s*)[^\s,"'}]+/gi, "$1[REDACTED]")
+    .replace(/(authorization\s*[:=]\s*bearer\s+)[^\s,"'}]+/gi, "$1[REDACTED]");
+}
+
 export interface SmartMovingClientOptions {
   apiKey: string;
   baseUrl?: string;
+  allowWrites?: boolean;
+  allowDestructive?: boolean;
 }
 
 export class SmartMovingClient {
   private readonly apiKey: string;
   private readonly baseUrl: string;
+  private readonly allowWrites: boolean;
+  private readonly allowDestructive: boolean;
 
   constructor(options: SmartMovingClientOptions) {
     this.apiKey = options.apiKey;
     this.baseUrl = (options.baseUrl ?? DEFAULT_BASE_URL).replace(/\/+$/, "");
+    this.allowWrites = options.allowWrites ?? envFlag("SMARTMOVING_ALLOW_WRITES");
+    this.allowDestructive = options.allowDestructive ?? envFlag("SMARTMOVING_ALLOW_DESTRUCTIVE");
   }
 
   // -------------------------------------------------------------------------
@@ -50,6 +76,28 @@ export class SmartMovingClient {
     };
   }
 
+  private assertWritesAllowed(method: "POST" | "PUT" | "PATCH" | "DELETE", path: string): void {
+    if (!this.allowWrites) {
+      const error: ApiError = {
+        statusCode: 403,
+        message:
+          `SmartMoving MCP is running in read-only mode. Refused ${method} ${path}. ` +
+          "Set SMARTMOVING_ALLOW_WRITES=true only after you are ready for this agent to change CRM data.",
+      };
+      throw error;
+    }
+
+    if (method === "DELETE" && !this.allowDestructive) {
+      const error: ApiError = {
+        statusCode: 403,
+        message:
+          `SmartMoving destructive operations are disabled. Refused ${method} ${path}. ` +
+          "Set SMARTMOVING_ALLOW_DESTRUCTIVE=true only when you intentionally want to allow delete-style operations.",
+      };
+      throw error;
+    }
+  }
+
   private async handleResponse<T>(response: Response): Promise<T> {
     if (response.status === 204) {
       return {} as T;
@@ -70,7 +118,7 @@ export class SmartMovingClient {
 
       const apiError: ApiError = {
         statusCode: response.status,
-        message: `SmartMoving API error: HTTP ${response.status} - ${errorBody}`,
+        message: redactSecrets(`SmartMoving API error: HTTP ${response.status} - ${errorBody}`, this.apiKey),
       };
       throw apiError;
     }
@@ -113,6 +161,7 @@ export class SmartMovingClient {
     body?: unknown,
     queryParams?: Record<string, string | number | boolean | null | undefined>,
   ): Promise<T> {
+    this.assertWritesAllowed("POST", path);
     const url = this.buildUrl(path, queryParams);
     const headers: Record<string, string> = {
       ...this.defaultHeaders(),
@@ -131,6 +180,7 @@ export class SmartMovingClient {
     body?: unknown,
     queryParams?: Record<string, string | number | boolean | null | undefined>,
   ): Promise<T> {
+    this.assertWritesAllowed("PUT", path);
     const url = this.buildUrl(path, queryParams);
     const headers: Record<string, string> = {
       ...this.defaultHeaders(),
@@ -149,6 +199,7 @@ export class SmartMovingClient {
     body?: unknown,
     queryParams?: Record<string, string | number | boolean | null | undefined>,
   ): Promise<T> {
+    this.assertWritesAllowed("PATCH", path);
     const url = this.buildUrl(path, queryParams);
     const headers: Record<string, string> = {
       ...this.defaultHeaders(),
@@ -166,6 +217,7 @@ export class SmartMovingClient {
     path: string,
     queryParams?: Record<string, string | number | boolean | null | undefined>,
   ): Promise<T> {
+    this.assertWritesAllowed("DELETE", path);
     const url = this.buildUrl(path, queryParams);
     const response = await fetch(url, {
       method: "DELETE",

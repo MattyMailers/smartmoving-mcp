@@ -28,8 +28,5 @@ jobs:
       - name: Install
         run: npm ci
 
-      - name: Build
-        run: npm run build
-
-      - name: Audit
-        run: npm audit --audit-level=high
+      - name: Verify
+        run: npm run verify

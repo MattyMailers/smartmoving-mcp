@@ -22,6 +22,16 @@ In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. Se
 
 - `SMARTMOVING_API_KEY`, required
 - `SMARTMOVING_BASE_URL`, optional, defaults to `https://api-public.smartmoving.com/v1`
+- `SMARTMOVING_ALLOW_WRITES`, optional. Set to `true` to allow POST, PUT, and PATCH tools. Defaults to read-only.
+- `SMARTMOVING_ALLOW_DESTRUCTIVE`, optional. Set to `true` to allow DELETE tools. Requires writes too.
+
+Recommended first run:
+
+```bash
+export SMARTMOVING_API_KEY="replace-with-your-key"
+export SMARTMOVING_ALLOW_WRITES="false"
+npm start
+```
 
 ## Verification
 
@@ -29,7 +39,7 @@ In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. Se
 npm run verify
 ```
 
-This runs TypeScript build and high-severity npm audit.
+This runs TypeScript build, mocked tests, and high-severity npm audit.
 
 ## Available tools, 62 total
 
@@ -120,6 +130,8 @@ This runs TypeScript build and high-severity npm audit.
 - `ping`
 
 ## Agent workflow notes
+
+For copy-paste prompts and workflow examples, see [`../docs/SAMPLE-PROMPTS.md`](../docs/SAMPLE-PROMPTS.md).
 
 - Start with `ping` to verify auth.
 - Load reference data before creating leads, opportunities, jobs, or materials.
