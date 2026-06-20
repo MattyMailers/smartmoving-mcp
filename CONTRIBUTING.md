@@ -19,7 +19,7 @@ AI-agent-assisted contributions are welcome. You may use Claude Code, Codex, Cur
 
 Maintainers should keep `main` protected and require pull requests for external contributions.
 
-For agent-specific repo instructions, see [`AGENTS.md`](./AGENTS.md).
+For detailed fork instructions, agent prompts, and non-code contribution paths, see [`docs/FORK-AND-CONTRIBUTE.md`](./docs/FORK-AND-CONTRIBUTE.md) and [`docs/SAMPLE-PROMPTS.md`](./docs/SAMPLE-PROMPTS.md).
 
 ## Ways to contribute
 

@@ -14,6 +14,8 @@ This project uses semantic versioning while the public API is stabilizing.
 - API-key redaction for SmartMoving API error messages.
 - Vitest test harness with mocked HTTP-client coverage.
 - Public release instructions for maintainers.
+- Fork-and-contribute guide for operators, developers, and AI-agent users.
+- Sample agent prompts for smoke tests, lookup workflows, write-enabled workflows, and coding-agent contributions.
 - NPM package file whitelist for cleaner public installs.
 
 ### Changed

@@ -17,7 +17,7 @@ The server currently registers **62 MCP tools** across eight areas:
 - **Communication:** log calls, log notes
 - **Reference data:** branches, move sizes, referral sources, service types, tariffs, tariff materials, users, arrival windows, reasons, ping
 
-See [`mcp-server/README.md`](./mcp-server/README.md) for the full tool catalog.
+See [`mcp-server/README.md`](./mcp-server/README.md) for the full tool catalog and [`docs/SAMPLE-PROMPTS.md`](./docs/SAMPLE-PROMPTS.md) for copy-paste prompts and workflow ideas.
 
 ## Repository layout
 
@@ -33,6 +33,9 @@ smartmoving-api/
 │   ├── ENDPOINTS.md
 │   ├── ENUMS.md
 │   ├── OPPORTUNITY-V1-V2-LIMITATIONS.md
+│   ├── FORK-AND-CONTRIBUTE.md
+│   ├── SAMPLE-PROMPTS.md
+│   ├── RELEASE.md
 │   ├── ROADMAP.md
 │   ├── SCHEMAS.md
 │   └── WORKFLOWS.md
@@ -166,7 +169,7 @@ Recommended open-source workflow:
 
 AI-agent-assisted contributions are welcome from Claude Code, Codex, Cursor, OpenCode, Hermes Agent, or any MCP-capable coding workflow. Agents can draft patches. Humans should still review before submitting.
 
-See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), [`docs/ROADMAP.md`](./docs/ROADMAP.md), [`docs/RELEASE.md`](./docs/RELEASE.md), and [`CHANGELOG.md`](./CHANGELOG.md).
+See [`CONTRIBUTING.md`](./CONTRIBUTING.md), [`AGENTS.md`](./AGENTS.md), [`docs/FORK-AND-CONTRIBUTE.md`](./docs/FORK-AND-CONTRIBUTE.md), [`docs/SAMPLE-PROMPTS.md`](./docs/SAMPLE-PROMPTS.md), [`docs/ROADMAP.md`](./docs/ROADMAP.md), [`docs/RELEASE.md`](./docs/RELEASE.md), and [`CHANGELOG.md`](./CHANGELOG.md).
 
 ## License
 

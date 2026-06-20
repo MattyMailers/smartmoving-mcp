@@ -131,6 +131,8 @@ This runs TypeScript build, mocked tests, and high-severity npm audit.
 
 ## Agent workflow notes
 
+For copy-paste prompts and workflow examples, see [`../docs/SAMPLE-PROMPTS.md`](../docs/SAMPLE-PROMPTS.md).
+
 - Start with `ping` to verify auth.
 - Load reference data before creating leads, opportunities, jobs, or materials.
 - Use exact UUIDs from reference data. Do not invent IDs.
