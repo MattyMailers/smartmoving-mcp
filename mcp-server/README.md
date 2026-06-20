@@ -35,6 +35,10 @@ export SMARTMOVING_ALLOW_WRITES="false"
 npm start
 ```
 
+## Use at your own risk
+
+This package can interact with live CRM data. It is provided **as is** and used at your own risk. The maintainers are not responsible for data loss, sync errors, incorrect results, downtime, duplicate or missing records, account issues, business interruption, or other problems arising from use of this tool. Test carefully and review agent actions before enabling writes. See [`NOTICE.md`](./NOTICE.md).
+
 ## Verification
 
 ```bash

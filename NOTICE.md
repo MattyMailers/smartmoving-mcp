@@ -15,4 +15,10 @@ Users are responsible for:
 - protecting customer data and credentials;
 - reviewing AI-agent actions before enabling write or destructive tools.
 
+## Use at your own risk
+
+This software is provided **as is** and is used entirely at your own risk. The maintainers and contributors are not responsible or liable for data loss, data corruption, incorrect results, failed API requests, failed syncs, downtime, duplicate records, missing records, CRM configuration problems, account issues, business interruption, lost revenue, or any other problems, errors, damages, or losses arising from use or misuse of this tool.
+
+You are responsible for testing the integration in your own environment, validating all agent actions, backing up important data where possible, and deciding whether this tool is appropriate for your business.
+
 The maintainers may rename, rebrand, or remove SmartMoving references if requested by the trademark owner or if needed to avoid confusion.

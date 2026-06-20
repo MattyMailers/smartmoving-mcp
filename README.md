@@ -73,6 +73,8 @@ The server uses stdio, so it is normally launched by an MCP client rather than r
 
 ## Safety modes
 
+This tool can interact with live CRM data. It is provided **as is** and used at your own risk. The maintainers are not responsible for data loss, sync errors, incorrect results, downtime, duplicate or missing records, account issues, business interruption, or other problems arising from use of this tool. Test carefully and review agent actions before enabling writes. See [`NOTICE.md`](./NOTICE.md).
+
 The public server is designed to be safe on first install:
 
 - Read operations are always available with a valid `SMARTMOVING_API_KEY`.
