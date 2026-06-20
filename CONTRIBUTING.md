@@ -1,5 +1,7 @@
 # Contributing to SmartMoving MCP
 
+> **Unofficial project.** This repository is not affiliated with, endorsed by, sponsored by, or certified by SmartMoving, LLC. Contributions should only use authorized API access, fake examples, and public/interoperability-safe information.
+
 Thanks for helping improve the SmartMoving MCP server. This project exists so AI agents can safely and reliably work with the SmartMoving External API.
 
 ## Contribution workflow
@@ -90,6 +92,10 @@ Never commit:
 - Customer names, phone numbers, emails, addresses, quote numbers, or payment data from a real account
 - Screenshots containing private CRM data
 - Agent logs containing real API responses
+- SmartMoving logos or branded assets unless you have explicit permission
+- Copied proprietary SmartMoving documentation beyond short references needed to identify endpoint behavior
+
+Do not present this project as official SmartMoving software, a SmartMoving-certified integration, or a SmartMoving-owned product.
 
 Use placeholders in docs and tests.
 

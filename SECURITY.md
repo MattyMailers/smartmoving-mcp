@@ -1,5 +1,7 @@
 # Security Policy
 
+> **Unofficial project.** This repository is independent from SmartMoving, LLC. Security reports for this repository should go to this project's maintainers. Vulnerabilities in SmartMoving's own platform, product, or API should be reported to SmartMoving through their official channels.
+
 ## Supported versions
 
 This repository is currently pre-1.0 open-source preparation. Security fixes should target `main` unless release branches are created later.

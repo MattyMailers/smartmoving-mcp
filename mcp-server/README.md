@@ -1,6 +1,8 @@
-# SmartMoving MCP Server package
+# SmartMoving MCP Server
 
-Node/TypeScript stdio MCP server for the SmartMoving External API v1.
+> **Unofficial project.** This package is an independent MCP bridge for authorized SmartMoving External API users. It is not affiliated with, endorsed by, sponsored by, or certified by SmartMoving, LLC or its affiliates. "SmartMoving" is used only to identify the external API this package interoperates with. See [`NOTICE.md`](./NOTICE.md).
+
+Node/TypeScript stdio MCP server for SmartMoving External API v1.
 
 ## Install
 

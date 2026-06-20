@@ -1,7 +1,7 @@
 {
   "name": "smartmoving-mcp-server",
   "version": "0.1.0",
-  "description": "MCP Server for SmartMoving External API - Moving Company CRM",
+  "description": "Unofficial MCP server for authorized SmartMoving External API users",
   "license": "MIT",
   "repository": {
     "type": "git",
@@ -43,6 +43,7 @@
   },
   "files": [
     "dist",
-    "README.md"
+    "README.md",
+    "NOTICE.md"
   ]
 }
