@@ -2,6 +2,7 @@
 
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stderr as output } from "node:process";
+import { readFile } from "node:fs/promises";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
@@ -11,6 +12,7 @@ import { registerSchemaCommand } from "./operations/register-cli.js";
 
 interface GlobalOptions {
   json?: boolean;
+  allowWrites?: boolean;
   plain?: boolean;
   quiet?: boolean;
   verbose?: boolean;
@@ -57,6 +59,34 @@ interface FollowupsDueOptions extends GlobalOptions {
   includeCompleted?: boolean;
 }
 
+interface WriteOptions extends GlobalOptions {
+  input?: string;
+  dryRun?: boolean;
+  yes?: boolean;
+  idempotencyKey?: string;
+  opportunityId?: string;
+  text?: string;
+}
+
+type WriteMethod = "POST" | "PUT" | "PATCH";
+
+interface PreparedWriteRequest {
+  method: WriteMethod;
+  path: string;
+  body?: unknown;
+}
+
+const truthyValues = new Set(["1", "true", "yes", "on"]);
+
+function envFlag(name: string): boolean {
+  const value = process.env[name];
+  return value ? truthyValues.has(value.trim().toLowerCase()) : false;
+}
+
+function writesEnabled(options?: GlobalOptions): boolean {
+  return options?.allowWrites === true || program.opts<GlobalOptions>().allowWrites === true || envFlag("SMARTMOVING_ALLOW_WRITES");
+}
+
 function requireClient(): SmartMovingClient {
   const apiKey = process.env.SMARTMOVING_API_KEY;
   if (!apiKey) {
@@ -68,6 +98,7 @@ function requireClient(): SmartMovingClient {
   return new SmartMovingClient({
     apiKey,
     baseUrl: process.env.SMARTMOVING_BASE_URL,
+    allowWrites: writesEnabled(program.opts<GlobalOptions>()),
   });
 }
 
@@ -119,6 +150,120 @@ async function runRead<T>(label: string, options: GlobalOptions, action: (client
     }
     process.exitCode = 1;
   }
+}
+
+function writesDisabledResponse(): { ok: false; error: { code: string; message: string; hint: string } } {
+  return {
+    ok: false,
+    error: {
+      code: "WRITES_DISABLED",
+      message: "Write operations are disabled by default.",
+      hint: "Set SMARTMOVING_ALLOW_WRITES=true or use --allow-writes, then run with --dry-run first.",
+    },
+  };
+}
+
+async function readStdinText(): Promise<string> {
+  let text = "";
+  input.setEncoding("utf8");
+  for await (const chunk of input) {
+    text += chunk;
+  }
+  return text;
+}
+
+async function readJsonInput(options: WriteOptions): Promise<unknown> {
+  if (!options.input) {
+    throw new Error("--input <file.json> is required for this write command.");
+  }
+
+  const raw = options.input === "-" ? await readStdinText() : await readFile(options.input, "utf8");
+  try {
+    return JSON.parse(raw) as unknown;
+  } catch (error) {
+    throw new Error(`Invalid JSON in --input ${options.input}: ${formatError(error)}`);
+  }
+}
+
+function requireObject(value: unknown, label: string): Record<string, unknown> {
+  if (!value || typeof value !== "object" || Array.isArray(value)) {
+    throw new Error(`${label} must be a JSON object.`);
+  }
+  return value as Record<string, unknown>;
+}
+
+function omitKeys(source: Record<string, unknown>, keys: string[]): Record<string, unknown> {
+  const result = { ...source };
+  for (const key of keys) {
+    delete result[key];
+  }
+  return result;
+}
+
+async function confirmWrite(options: WriteOptions, request: PreparedWriteRequest): Promise<void> {
+  if (wantsJson(options) || options.yes || options.dryRun) {
+    return;
+  }
+
+  const reader = createInterface({ input, output });
+  try {
+    const answer = await reader.question(`About to ${request.method} ${request.path}. Type yes to continue: `);
+    if (answer.trim().toLowerCase() !== "yes") {
+      throw new Error("Write cancelled.");
+    }
+  } finally {
+    reader.close();
+  }
+}
+
+async function runWrite(label: string, options: WriteOptions, prepare: () => Promise<PreparedWriteRequest>): Promise<void> {
+  try {
+    if (!writesEnabled(options)) {
+      if (wantsJson(options)) {
+        console.log(formatJson(writesDisabledResponse()));
+      } else {
+        console.error("Error: Write operations are disabled by default. Set SMARTMOVING_ALLOW_WRITES=true or use --allow-writes, then run with --dry-run first.");
+      }
+      process.exitCode = 1;
+      return;
+    }
+
+    const request = await prepare();
+    if (options.dryRun || !options.yes) {
+      printResult(label, { ok: true, dryRun: true, request }, options);
+      return;
+    }
+
+    await confirmWrite(options, request);
+    const client = requireClient();
+    const result = request.method === "POST"
+      ? await client.post(request.path, request.body)
+      : request.method === "PUT"
+        ? await client.put(request.path, request.body)
+        : await client.patch(request.path, request.body);
+    printReadResult(label, result, options);
+  } catch (error) {
+    if (wantsJson(options)) {
+      console.log(formatJson({ ok: false, error: { code: "WRITE_FAILED", message: formatError(error) } }));
+    } else {
+      console.error(`Error: ${formatError(error)}`);
+    }
+    process.exitCode = 1;
+  }
+}
+
+function addWriteOptions(command: Command): Command {
+  return command
+    .addOption(jsonOption())
+    .addOption(new Option("--allow-writes", "allow write operations for this command"))
+    .requiredOption("--input <file.json>", "JSON request body file, or '-' to read JSON from stdin")
+    .option("--dry-run", "validate and print the request without calling SmartMoving")
+    .option("--yes", "skip interactive confirmation")
+    .option("--idempotency-key <key>", "caller-supplied idempotency key for external tracking");
+}
+
+async function inputBody(options: WriteOptions): Promise<Record<string, unknown>> {
+  return requireObject(await readJsonInput(options), "--input");
 }
 
 async function promptDefault(question: string, defaultValue: string): Promise<string> {
@@ -254,6 +399,7 @@ program
   .description("Read-only CLI for the SmartMoving External API v1")
   .version("0.1.0")
   .addOption(jsonOption())
+  .addOption(new Option("--allow-writes", "allow guarded write commands; alternatively set SMARTMOVING_ALLOW_WRITES=true"))
   .addOption(new Option("--plain", "prefer plain text output for commands that support it"))
   .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
   .addOption(new Option("--verbose", "print extra diagnostic detail where supported"))
@@ -403,6 +549,25 @@ addReadOptions(customers
     runRead("Customer", options, (client) => client.get(`/api/customers/${customerId}`)),
   );
 
+addWriteOptions(customers
+  .command("create")
+  .description("Create a customer. Guarded write; dry-run first."))
+  .action((options: WriteOptions) => runWrite("Customer create", options, async () => ({
+    method: "POST",
+    path: "/api/premium/customers",
+    body: await inputBody(options),
+  })));
+
+addWriteOptions(customers
+  .command("update")
+  .description("Update a customer by UUID. Guarded write; dry-run first.")
+  .argument("<customerId>", "customer UUID"))
+  .action((customerId: string, options: WriteOptions) => runWrite("Customer update", options, async () => ({
+    method: "PUT",
+    path: `/api/premium/customers/${customerId}`,
+    body: await inputBody(options),
+  })));
+
 addReadOptions(customers
   .command("search")
   .description("Search customers by name, phone, or email.")
@@ -445,6 +610,35 @@ addReadOptions(leads
   .action((leadId: string, options: GlobalOptions) =>
     runRead("Lead", options, (client) => client.get(`/api/leads/${leadId}`)),
   );
+
+addWriteOptions(leads
+  .command("create")
+  .description("Create a lead. Guarded write; dry-run first."))
+  .action((options: WriteOptions) => runWrite("Lead create", options, async () => ({
+    method: "POST",
+    path: "/api/premium/leads",
+    body: await inputBody(options),
+  })));
+
+addWriteOptions(leads
+  .command("update")
+  .description("Full update for a lead. Guarded write; dry-run first.")
+  .argument("<leadId>", "lead UUID"))
+  .action((leadId: string, options: WriteOptions) => runWrite("Lead update", options, async () => ({
+    method: "PUT",
+    path: `/api/premium/leads/${leadId}`,
+    body: await inputBody(options),
+  })));
+
+addWriteOptions(leads
+  .command("patch")
+  .description("Partially update a lead. Guarded write; dry-run first.")
+  .argument("<leadId>", "lead UUID"))
+  .action((leadId: string, options: WriteOptions) => runWrite("Lead patch", options, async () => ({
+    method: "PATCH",
+    path: `/api/premium/leads/${leadId}`,
+    body: await inputBody(options),
+  })));
 
 addReadOptions(leads
   .command("by-salesperson")
@@ -494,6 +688,25 @@ addReadOptions(opportunities
     runRead("Opportunity", options, (client) => client.get(`/api/opportunities/quote/${encodeURIComponent(quoteNumber)}`)),
   );
 
+addWriteOptions(opportunities
+  .command("create")
+  .description("Create an opportunity. Guarded write; dry-run first."))
+  .action((options: WriteOptions) => runWrite("Opportunity create", options, async () => ({
+    method: "POST",
+    path: "/api/premium/opportunity",
+    body: await inputBody(options),
+  })));
+
+addWriteOptions(opportunities
+  .command("update")
+  .description("Update an opportunity. Guarded write; dry-run first.")
+  .argument("<opportunityId>", "opportunity UUID"))
+  .action((opportunityId: string, options: WriteOptions) => runWrite("Opportunity update", options, async () => ({
+    method: "PATCH",
+    path: `/api/premium/opportunities/${opportunityId}`,
+    body: await inputBody(options),
+  })));
+
 for (const [commandName, label, pathFor] of [
   ["audit", "Opportunity audit", (opportunityId: string) => `/api/opportunities/${opportunityId}/audit-activity`],
   ["documents", "Opportunity documents", (opportunityId: string) => `/api/premium/opportunities/${opportunityId}/documents`],
@@ -541,7 +754,7 @@ addReadOptions(jobs
     ),
   );
 
-addReadOptions(jobs
+const jobNotes = addReadOptions(jobs
   .command("notes")
   .description("Read all note fields on a job.")
   .argument("<jobId>", "job UUID")
@@ -551,6 +764,35 @@ addReadOptions(jobs
       client.get(`/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}`, { IncludeNotes: true }),
     ),
   );
+
+addWriteOptions(jobNotes
+  .command("update")
+  .description("Update job note fields. Guarded write; dry-run first.")
+  .argument("<jobId>", "job UUID")
+  .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+  .action((jobId: string, options: WriteOptions) => runWrite("Job notes update", options, async () => ({
+    method: "PATCH",
+    path: `/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}/notes`,
+    body: await inputBody(options),
+  })));
+
+jobNotes
+  .command("append")
+  .description("Append text to a job note field. Guarded write; dry-run first.")
+  .argument("<jobId>", "job UUID")
+  .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API")
+  .requiredOption("--text <text>", "text to append")
+  .addOption(jsonOption())
+  .addOption(new Option("--allow-writes", "allow write operations for this command"))
+  .option("--dry-run", "validate and print the request without calling SmartMoving")
+  .option("--yes", "skip interactive confirmation")
+  .option("--idempotency-key <key>", "caller-supplied idempotency key for external tracking")
+  .action((jobId: string, options: WriteOptions) => runWrite("Job note append", options, async () => ({
+    method: "PATCH",
+    path: `/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}/notes`,
+    body: { internalNotes: options.text },
+  })));
+
 
 const inventory = program.command("inventory").description("Read opportunity inventory data.");
 
@@ -612,6 +854,61 @@ addReadOptions(followups
       return filterDueFollowups(result, now, options.includeCompleted === true);
     }),
   );
+
+addWriteOptions(followups
+  .command("create")
+  .description("Create a follow-up for an opportunity. Guarded write; dry-run first.")
+  .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID"))
+  .action((options: WriteOptions) => runWrite("Follow-up create", options, async () => ({
+    method: "POST",
+    path: `/api/premium/opportunities/${options.opportunityId}/followups`,
+    body: await inputBody(options),
+  })));
+
+addWriteOptions(followups
+  .command("update")
+  .description("Update a follow-up for an opportunity. Guarded write; dry-run first.")
+  .argument("<followupId>", "follow-up UUID")
+  .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID"))
+  .action((followupId: string, options: WriteOptions) => runWrite("Follow-up update", options, async () => ({
+    method: "PUT",
+    path: `/api/premium/opportunities/${options.opportunityId}/followups/${followupId}`,
+    body: await inputBody(options),
+  })));
+
+const communication = program.command("communication").description("Log guarded communication writes.");
+
+addWriteOptions(communication
+  .command("note")
+  .description("Log a note on an opportunity. Guarded write; dry-run first."))
+  .action((options: WriteOptions) => runWrite("Communication note", options, async () => {
+    const body = await inputBody(options);
+    const opportunityId = typeof body.opportunityId === "string" ? body.opportunityId : undefined;
+    if (!opportunityId) {
+      throw new Error("--input must include an opportunityId string.");
+    }
+    return {
+      method: "POST",
+      path: `/api/premium/opportunities/${opportunityId}/communication/notes`,
+      body: omitKeys(body, ["opportunityId"]),
+    };
+  }));
+
+addWriteOptions(communication
+  .command("call")
+  .description("Log a call on an opportunity. Guarded write; dry-run first."))
+  .action((options: WriteOptions) => runWrite("Communication call", options, async () => {
+    const body = await inputBody(options);
+    const opportunityId = typeof body.opportunityId === "string" ? body.opportunityId : undefined;
+    if (!opportunityId) {
+      throw new Error("--input must include an opportunityId string.");
+    }
+    return {
+      method: "POST",
+      path: `/api/premium/opportunities/${opportunityId}/communication/calls`,
+      body: omitKeys(body, ["opportunityId"]),
+    };
+  }));
 
 program.parseAsync(process.argv).catch((error: unknown) => {
   console.error(`Error: ${formatError(error)}`);

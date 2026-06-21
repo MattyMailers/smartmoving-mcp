@@ -591,6 +591,26 @@ When possible, set `createdBy` to the actual user (salesperson) who made the cal
 
 ## Security Considerations
 
+### Guard CLI Writes
+
+The `smartmoving` CLI is read-only by default. Non-destructive write commands must be explicitly enabled and should be dry-run first:
+
+```bash
+smartmoving leads create --input lead.json --json
+SMARTMOVING_ALLOW_WRITES=true smartmoving leads create --input lead.json --dry-run --json
+SMARTMOVING_ALLOW_WRITES=true smartmoving leads create --input lead.json --yes --json
+smartmoving --allow-writes leads create --input lead.json --dry-run --json
+```
+
+Best practices for CLI writes:
+
+- Keep `SMARTMOVING_ALLOW_WRITES=false` by default in shells and agent configs.
+- Use `--input <file.json>` or `--input -`; never pass API keys or sensitive customer data as command arguments.
+- Run `--dry-run` before the real command and inspect the method, path, and request body.
+- Use synthetic/fake data in tests. The default test suite uses mocked HTTP servers and must not create live CRM records.
+- JSON mode never prompts; real writes require `--yes` after reviewing the dry-run. Without `--yes`, enabled write commands still return dry-run output.
+- Destructive CLI commands are not exposed. Destructive MCP tools require both `SMARTMOVING_ALLOW_WRITES=true` and `SMARTMOVING_ALLOW_DESTRUCTIVE=true`.
+
 ### Never Log API Keys
 
 Ensure your logging framework redacts the `x-api-key` header and `api-key` query parameter from logs.

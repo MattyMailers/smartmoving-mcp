@@ -1,4 +1,4 @@
-import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -19,6 +19,7 @@ interface CapturedRequest {
   method: string;
   path: string;
   headers: IncomingMessage["headers"];
+  body: string;
 }
 
 interface ReadCommandCase {
@@ -27,17 +28,24 @@ interface ReadCommandCase {
   expectedPath: string;
 }
 
-async function runCli(args: string[], env: Record<string, string | undefined> = {}): Promise<CliResult> {
+async function runCli(args: string[], env: Record<string, string | undefined> = {}, stdin?: string): Promise<CliResult> {
   const child = spawn(process.execPath, [...cliArgs, ...args], {
     cwd: process.cwd(),
     env: {
       ...process.env,
       SMARTMOVING_API_KEY: undefined,
       SMARTMOVING_BASE_URL: undefined,
+      SMARTMOVING_ALLOW_WRITES: undefined,
       ...env,
     },
-    stdio: ["ignore", "pipe", "pipe"],
+    stdio: ["pipe", "pipe", "pipe"],
   });
+
+  if (stdin !== undefined) {
+    child.stdin.end(stdin);
+  } else {
+    child.stdin.end();
+  }
 
   let stdout = "";
   let stderr = "";
@@ -60,12 +68,20 @@ async function withMockApi<T>(
 ): Promise<T> {
   const requests: CapturedRequest[] = [];
   const server = createServer((request, response) => {
-    requests.push({
-      method: request.method ?? "GET",
-      path: request.url ?? "",
-      headers: request.headers,
+    let body = "";
+    request.setEncoding("utf8");
+    request.on("data", (chunk: string) => {
+      body += chunk;
     });
-    handler(request, response);
+    request.on("end", () => {
+      requests.push({
+        method: request.method ?? "GET",
+        path: request.url ?? "",
+        headers: request.headers,
+        body,
+      });
+      handler(request, response);
+    });
   });
 
   try {
@@ -206,6 +222,149 @@ describe("SmartMoving CLI", () => {
         expect(result.stdout).toContain("[REDACTED]");
         expect(result.stdout).not.toContain(testApiKey);
         expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, error: { code: "READ_FAILED" } });
+      },
+    );
+  });
+
+  it("write commands refuse by default with stable JSON before making an HTTP request", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const inputPath = join(dir, "lead.json");
+        await writeFile(inputPath, JSON.stringify({ name: "Synthetic Lead" }));
+
+        try {
+          const result = await runCli(["leads", "create", "--input", inputPath, "--json"], {
+            SMARTMOVING_API_KEY: testApiKey,
+            SMARTMOVING_BASE_URL: baseUrl,
+          });
+
+          expect(result.code).toBe(1);
+          expect(result.stderr).toBe("");
+          expect(JSON.parse(result.stdout)).toEqual({
+            ok: false,
+            error: {
+              code: "WRITES_DISABLED",
+              message: "Write operations are disabled by default.",
+              hint: "Set SMARTMOVING_ALLOW_WRITES=true or use --allow-writes, then run with --dry-run first.",
+            },
+          });
+          expect(requests).toHaveLength(0);
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("dry-run write commands validate input and do not call the HTTP client even when writes are enabled", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const inputPath = join(dir, "customer.json");
+        await writeFile(inputPath, JSON.stringify({ displayName: "Synthetic Customer" }));
+
+        try {
+          const result = await runCli(["customers", "create", "--input", inputPath, "--dry-run", "--json"], {
+            SMARTMOVING_API_KEY: testApiKey,
+            SMARTMOVING_BASE_URL: baseUrl,
+            SMARTMOVING_ALLOW_WRITES: "true",
+          });
+
+          expect(result.code).toBe(0);
+          expect(result.stderr).toBe("");
+          expect(JSON.parse(result.stdout)).toEqual({
+            ok: true,
+            dryRun: true,
+            request: {
+              method: "POST",
+              path: "/api/premium/customers",
+              body: { displayName: "Synthetic Customer" },
+            },
+          });
+          expect(requests).toHaveLength(0);
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("write commands default to dry-run unless --yes is provided", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const inputPath = join(dir, "customer.json");
+        await writeFile(inputPath, JSON.stringify({ displayName: "Synthetic Customer" }));
+
+        try {
+          const result = await runCli(["--allow-writes", "customers", "create", "--input", inputPath, "--json"], {
+            SMARTMOVING_API_KEY: testApiKey,
+            SMARTMOVING_BASE_URL: baseUrl,
+          });
+
+          expect(result.code).toBe(0);
+          expect(result.stderr).toBe("");
+          expect(JSON.parse(result.stdout)).toMatchObject({
+            ok: true,
+            dryRun: true,
+            request: { method: "POST", path: "/api/premium/customers" },
+          });
+          expect(requests).toHaveLength(0);
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("SMARTMOVING_ALLOW_WRITES=true allows mocked writes with parsed input files", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { id: "lead-1" }),
+      async (baseUrl, requests) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const inputPath = join(dir, "lead.json");
+        await writeFile(inputPath, JSON.stringify({ name: "Synthetic Lead" }));
+
+        try {
+          const result = await runCli(["leads", "create", "--input", inputPath, "--yes", "--json"], {
+            SMARTMOVING_API_KEY: testApiKey,
+            SMARTMOVING_BASE_URL: baseUrl,
+            SMARTMOVING_ALLOW_WRITES: "true",
+          });
+
+          expect(result.code).toBe(0);
+          expect(result.stderr).toBe("");
+          expectJsonOk(result.stdout, { id: "lead-1" });
+          expect(requests).toHaveLength(1);
+          expect(requests[0]).toMatchObject({ method: "POST", path: "/v1/api/premium/leads" });
+          expect(JSON.parse(requests[0]?.body ?? "{}")) .toEqual({ name: "Synthetic Lead" });
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("stdin JSON works with --input - and --yes in JSON mode without prompting", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { id: "note-1" }),
+      async (baseUrl, requests) => {
+        const result = await runCli(["communication", "note", "--input", "-", "--yes", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+          SMARTMOVING_ALLOW_WRITES: "true",
+        }, JSON.stringify({ opportunityId: "opp-1", message: "Synthetic note" }));
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expectJsonOk(result.stdout, { id: "note-1" });
+        expect(requests).toHaveLength(1);
+        expect(requests[0]).toMatchObject({ method: "POST", path: "/v1/api/premium/opportunities/opp-1/communication/notes" });
+        expect(JSON.parse(requests[0]?.body ?? "{}")) .toEqual({ message: "Synthetic note" });
       },
     );
   });

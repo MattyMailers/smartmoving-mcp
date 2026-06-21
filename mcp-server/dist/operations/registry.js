@@ -68,7 +68,7 @@ const operationMetadata = [
         "group": "customers",
         "safety": "write",
         "cli": {
-            "command": "customers create-customer",
+            "command": "customers create",
             "description": "Create a new customer record in SmartMoving. Premium tier endpoint. At minimum a name (first/last or company) should be provided. Returns the created customer with its new ID.",
             "examples": [
                 "smartmoving customers create-customer --json"
@@ -87,7 +87,7 @@ const operationMetadata = [
         "group": "customers",
         "safety": "write",
         "cli": {
-            "command": "customers update-customer",
+            "command": "customers update",
             "description": "Update an existing customer record. Premium tier endpoint. Provide the customer ID and any fields you want to change. Fields not included will remain unchanged.",
             "examples": [
                 "smartmoving customers update-customer --json"
@@ -206,7 +206,7 @@ const operationMetadata = [
         "group": "leads",
         "safety": "write",
         "cli": {
-            "command": "leads create-lead",
+            "command": "leads create",
             "description": "Create a new lead in SmartMoving. Premium tier endpoint. A lead represents a potential customer inquiry. You can provide either separate firstName/lastName fields or a combined 'name' field. The referralSourceId is required - use get_referral_sources to find valid IDs.",
             "examples": [
                 "smartmoving leads create-lead --json"
@@ -225,7 +225,7 @@ const operationMetadata = [
         "group": "leads",
         "safety": "write",
         "cli": {
-            "command": "leads update-lead",
+            "command": "leads update",
             "description": "Fully update an existing lead record. Premium tier endpoint. This is a PUT operation - all fields will be set to the provided values (omitted fields may be cleared). For partial updates, use patch_lead instead.",
             "examples": [
                 "smartmoving leads update-lead --json"
@@ -244,7 +244,7 @@ const operationMetadata = [
         "group": "leads",
         "safety": "write",
         "cli": {
-            "command": "leads patch-lead",
+            "command": "leads patch",
             "description": "Partially update an existing lead. Premium tier endpoint. Only the fields you provide will be modified; all other fields remain unchanged. Use this for small updates to a lead.",
             "examples": [
                 "smartmoving leads patch-lead --json"
@@ -367,7 +367,7 @@ const operationMetadata = [
         "group": "opportunities",
         "safety": "write",
         "cli": {
-            "command": "opportunities create-opportunity",
+            "command": "opportunities create",
             "description": "Create a new opportunity (quote) directly, bypassing the lead stage. Premium tier endpoint. An opportunity represents a potential move that can be priced, scheduled, and booked. The referralSourceId is required - use get_referral_sources to find valid IDs. You can provide either firstName/lastName or the combined 'name' field.",
             "examples": [
                 "smartmoving opportunities create-opportunity --json"
@@ -386,7 +386,7 @@ const operationMetadata = [
         "group": "opportunities",
         "safety": "write",
         "cli": {
-            "command": "opportunities update-opportunity",
+            "command": "opportunities update",
             "description": "Update an existing opportunity. Premium tier endpoint. This is a PATCH operation - only the fields you provide will be modified. Use this to update customer info, move details, pricing, status changes, etc. To mark as lost/cancelled, set the status and provide the corresponding reason ID.",
             "examples": [
                 "smartmoving opportunities update-opportunity --json"
@@ -632,7 +632,7 @@ const operationMetadata = [
         "group": "jobs",
         "safety": "write",
         "cli": {
-            "command": "jobs update-job-notes",
+            "command": "jobs notes update",
             "description": "Update one or more note fields on a specific job. Premium tier endpoint. SmartMoving PATCH updates the provided note properties only, but each provided field value replaces that field. To add text below existing notes, use append_job_note instead.",
             "examples": [
                 "smartmoving jobs update-job-notes --json"
@@ -651,7 +651,7 @@ const operationMetadata = [
         "group": "jobs",
         "safety": "write",
         "cli": {
-            "command": "jobs append-job-note",
+            "command": "jobs notes append",
             "description": "Append text below an existing job note field without erasing the prior content. This reads the current notes, adds a blank line plus the new text, then PATCHes only the selected note field. Fails if the job is closed or SmartMoving rejects note updates.",
             "examples": [
                 "smartmoving jobs append-job-note --json"
@@ -884,7 +884,7 @@ const operationMetadata = [
         "group": "followups",
         "safety": "write",
         "cli": {
-            "command": "followups create-followup",
+            "command": "followups create",
             "description": "Create a new follow-up task on an OPPORTUNITY. SmartMoving does not support lead-level follow-ups through this endpoint: convert the lead to an opportunity first. Use this to schedule a callback, email, text, or in-home estimate. Types: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET. Required API field names are type, title, assignedToId, and dueDateTime.",
             "examples": [
                 "smartmoving followups create-followup --json"
@@ -903,7 +903,7 @@ const operationMetadata = [
         "group": "followups",
         "safety": "write",
         "cli": {
-            "command": "followups update-followup",
+            "command": "followups update",
             "description": "Update an existing follow-up. Premium tier endpoint. Use this to reschedule, reassign, change type, or update notes on a follow-up task.",
             "examples": [
                 "smartmoving followups update-followup --json"
@@ -960,7 +960,7 @@ const operationMetadata = [
         "group": "communication",
         "safety": "write",
         "cli": {
-            "command": "communication log-call",
+            "command": "communication call",
             "description": "Log a phone call on an opportunity. Premium tier endpoint. Records an inbound or outbound call with its outcome. Use this to track all phone interactions with the customer. Call types: 0=Outbound, 1=Inbound. Outcomes: 0=NoAnswer, 1=Busy, 2=WrongNumber, 3=LeftLiveMessage, 4=LeftVoicemail, 5=Connected, 6=NumberDisconnected.",
             "examples": [
                 "smartmoving communication log-call --json"
@@ -979,7 +979,7 @@ const operationMetadata = [
         "group": "communication",
         "safety": "write",
         "cli": {
-            "command": "communication log-note",
+            "command": "communication note",
             "description": "Log a note on an opportunity. Premium tier endpoint. Use this to record any interaction, observation, or update that isn't a phone call. Notes appear in the opportunity's activity timeline.",
             "examples": [
                 "smartmoving communication log-note --json"
