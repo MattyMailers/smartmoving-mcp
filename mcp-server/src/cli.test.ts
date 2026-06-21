@@ -1,3 +1,6 @@
+import { mkdtemp, readFile, rm } from "node:fs/promises";
+import { tmpdir } from "node:os";
+import { join } from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
 import { once } from "node:events";
 import { spawn } from "node:child_process";
@@ -180,5 +183,151 @@ describe("SmartMoving CLI", () => {
     expect(result.stdout).toContain("Usage: smartmoving leads list [options]");
     expect(result.stdout).toContain("--page-size <pageSize>");
     expect(result.stdout).toContain("--json");
+  });
+
+  it("init --yes writes profile config without storing a raw API key", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+    const configPath = join(dir, "config.json");
+
+    try {
+      const result = await runCli(
+        ["init", "--yes", "--profile", "dispatch", "--api-key-env", "SMARTMOVING_TEST_KEY", "--base-url", "https://example.test/v1", "--json"],
+        { SMARTMOVING_CONFIG_PATH: configPath },
+      );
+
+      expect(result.code).toBe(0);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.stdout)).toEqual({ ok: true, configPath, profile: "dispatch", apiKeyEnv: "SMARTMOVING_TEST_KEY" });
+
+      const config = JSON.parse(await readFile(configPath, "utf8"));
+      expect(config).toEqual({
+        version: 1,
+        defaultProfile: "dispatch",
+        profiles: {
+          dispatch: {
+            baseUrl: "https://example.test/v1",
+            apiKeyEnv: "SMARTMOVING_TEST_KEY",
+          },
+        },
+      });
+      expect(JSON.stringify(config)).not.toContain(testApiKey);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("doctor --json reports missing API key with stable JSON and no stdout noise", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+    const configPath = join(dir, "config.json");
+
+    try {
+      await runCli(["init", "--yes", "--profile", "default", "--api-key-env", "SMARTMOVING_TEST_KEY"], {
+        SMARTMOVING_CONFIG_PATH: configPath,
+      });
+
+      const result = await runCli(["doctor", "--json"], { SMARTMOVING_CONFIG_PATH: configPath });
+
+      expect(result.code).toBe(1);
+      expect(result.stderr).toBe("");
+      expect(JSON.parse(result.stdout)).toMatchObject({
+        ok: false,
+        error: {
+          code: "AUTH_MISSING",
+          message: "SMARTMOVING_TEST_KEY is required",
+          hint: "Run smartmoving init or export SMARTMOVING_TEST_KEY.",
+        },
+        safety: {
+          writesEnabled: false,
+          destructiveEnabled: false,
+        },
+      });
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
+  it("doctor --json pings the configured API without printing the API key", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { ok: true }),
+      async (baseUrl) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const configPath = join(dir, "config.json");
+
+        try {
+          await runCli(["init", "--yes", "--profile", "default", "--api-key-env", "SMARTMOVING_TEST_KEY", "--base-url", baseUrl], {
+            SMARTMOVING_CONFIG_PATH: configPath,
+          });
+
+          const result = await runCli(["doctor", "--json"], {
+            SMARTMOVING_CONFIG_PATH: configPath,
+            SMARTMOVING_TEST_KEY: testApiKey,
+          });
+
+          expect(result.code).toBe(0);
+          expect(result.stderr).toBe("");
+          expect(result.stdout).not.toContain(testApiKey);
+          expect(JSON.parse(result.stdout)).toMatchObject({
+            ok: true,
+            checks: expect.arrayContaining([
+              expect.objectContaining({ name: "apiKey", ok: true, detail: "present via SMARTMOVING_TEST_KEY" }),
+              expect.objectContaining({ name: "ping", ok: true }),
+            ]),
+          });
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("doctor --json redacts custom-profile API keys from ping errors", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 401, { message: `invalid x-api-key: ${testApiKey}` }),
+      async (baseUrl) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const configPath = join(dir, "config.json");
+
+        try {
+          await runCli(["init", "--yes", "--profile", "default", "--api-key-env", "SMARTMOVING_TEST_KEY", "--base-url", baseUrl], {
+            SMARTMOVING_CONFIG_PATH: configPath,
+          });
+
+          const result = await runCli(["doctor", "--json"], {
+            SMARTMOVING_CONFIG_PATH: configPath,
+            SMARTMOVING_TEST_KEY: testApiKey,
+          });
+
+          expect(result.code).toBe(1);
+          expect(result.stderr).toBe("");
+          expect(result.stdout).not.toContain(testApiKey);
+          expect(JSON.parse(result.stdout)).toMatchObject({
+            ok: false,
+            checks: expect.arrayContaining([expect.objectContaining({ name: "ping", ok: false })]),
+          });
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
+  });
+
+  it("mcp config --print-json references env vars instead of raw API keys", async () => {
+    const result = await runCli(["mcp", "config", "--print-json"], { SMARTMOVING_API_KEY: testApiKey });
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).not.toContain(testApiKey);
+    expect(JSON.parse(result.stdout)).toEqual({
+      mcpServers: {
+        smartmoving: {
+          command: "npx",
+          args: ["-y", "smartmoving-mcp-server"],
+          env: {
+            SMARTMOVING_API_KEY: "${SMARTMOVING_API_KEY}",
+            SMARTMOVING_ALLOW_WRITES: "false",
+          },
+        },
+      },
+    });
   });
 });

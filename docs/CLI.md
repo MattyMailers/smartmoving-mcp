@@ -53,13 +53,51 @@ Variables used by the package:
 
 - `SMARTMOVING_API_KEY`: required. Must belong to an authorized SmartMoving API user.
 - `SMARTMOVING_BASE_URL`: optional. Defaults to `https://api-public.smartmoving.com/v1`.
+- `SMARTMOVING_CONFIG_PATH`: optional CLI config path override, useful for tests and isolated agent profiles. Defaults to `~/.config/smartmoving/config.json`.
 - `SMARTMOVING_ALLOW_WRITES`: optional. Used by MCP write tools, not by the read-only CLI MVP. Defaults to read-only behavior.
 - `SMARTMOVING_ALLOW_DESTRUCTIVE`: optional. Used by MCP destructive tools only when writes are also enabled.
+
+## First-run CLI config
+
+Create a local CLI profile without storing a raw API key:
+
+```bash
+node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+```
+
+This writes `~/.config/smartmoving/config.json` by default:
+
+```json
+{
+  "version": 1,
+  "defaultProfile": "default",
+  "profiles": {
+    "default": {
+      "baseUrl": "https://api-public.smartmoving.com/v1",
+      "apiKeyEnv": "SMARTMOVING_API_KEY"
+    }
+  }
+}
+```
+
+The config stores the environment variable name only. Keep the real API key in your shell, agent config, keychain, or another private secret store.
+
+Run diagnostics:
+
+```bash
+node dist/cli.js doctor
+node dist/cli.js doctor --json
+```
+
+`doctor --json` writes machine-readable JSON only to stdout and reports missing-key failures with a stable error shape such as `AUTH_MISSING`.
 
 ## Run from built `dist`
 
 ```bash
 node dist/cli.js --help
+node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+node dist/cli.js doctor --json
+node dist/cli.js mcp config --print-json
 node dist/cli.js ping
 node dist/cli.js leads list --page-size 10 --json
 node dist/cli.js reference branches --json
@@ -78,6 +116,11 @@ SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js leads list --page-s
 
 ```bash
 smartmoving ping
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving mcp config --print-hermes
+smartmoving mcp config --print-claude
+smartmoving mcp config --print-json
 smartmoving reference branches --json
 smartmoving reference move-sizes --json
 smartmoving customers get <customerId> --json

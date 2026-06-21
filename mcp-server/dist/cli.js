@@ -1,6 +1,10 @@
 #!/usr/bin/env node
+import { createInterface } from "node:readline/promises";
+import { stdin as input, stderr as output } from "node:process";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
+import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
+import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
 function requireClient() {
     const apiKey = process.env.SMARTMOVING_API_KEY;
@@ -22,15 +26,97 @@ function positiveInteger(value, label) {
 function jsonOption() {
     return new Option("--json", "print machine-readable JSON output");
 }
+function profileOption() {
+    return new Option("--profile <name>", "SmartMoving CLI config profile");
+}
+function printResult(label, value, options) {
+    const json = options.json === true || program.opts().json === true;
+    console.log(json ? formatJson(value) : formatHuman(label, value));
+}
 async function runRead(label, options, action) {
     try {
         const result = await action(requireClient());
-        console.log(options.json ? formatJson(result) : formatHuman(label, result));
+        printResult(label, result, options);
     }
     catch (error) {
         console.error(`Error: ${formatError(error)}`);
         process.exitCode = 1;
     }
+}
+async function promptDefault(question, defaultValue) {
+    const reader = createInterface({ input, output });
+    try {
+        const answer = await reader.question(`${question} (${defaultValue}): `);
+        return answer.trim() || defaultValue;
+    }
+    finally {
+        reader.close();
+    }
+}
+async function runInit(options) {
+    try {
+        let profile = options.profile ?? program.opts().profile ?? "default";
+        let apiKeyEnv = options.apiKeyEnv ?? DEFAULT_API_KEY_ENV;
+        let baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+        if (!options.yes) {
+            profile = await promptDefault("Profile name", profile);
+            apiKeyEnv = await promptDefault("API key environment variable", apiKeyEnv);
+            baseUrl = await promptDefault("Base URL", baseUrl);
+        }
+        if (options.apiKeyStdin) {
+            if (!options.quiet) {
+                console.error("Note: --api-key-stdin validates that a key was provided, but raw API keys are never stored in config.");
+            }
+            for await (const _chunk of input) {
+                break;
+            }
+        }
+        const path = configPath();
+        const config = await writeInitialConfig({ profile, apiKeyEnv, baseUrl }, path);
+        const result = { ok: true, configPath: path, profile: config.defaultProfile, apiKeyEnv: config.profiles[config.defaultProfile]?.apiKeyEnv };
+        printResult("Initialized SmartMoving CLI config", result, options);
+        if (options.runDoctor) {
+            const doctor = await runDoctor({ profile: config.defaultProfile });
+            printResult("Doctor", doctor, options);
+            if (!doctor.ok) {
+                process.exitCode = 1;
+            }
+        }
+    }
+    catch (error) {
+        if (options.json) {
+            console.log(formatJson({ ok: false, error: { code: "INIT_FAILED", message: formatError(error), hint: "Check the init options and try again." } }));
+        }
+        else {
+            console.error(`Error: ${formatError(error)}`);
+        }
+        process.exitCode = 1;
+    }
+}
+function mcpJsonConfig() {
+    return {
+        mcpServers: {
+            smartmoving: {
+                command: "npx",
+                args: ["-y", "smartmoving-mcp-server"],
+                env: {
+                    SMARTMOVING_API_KEY: "${SMARTMOVING_API_KEY}",
+                    SMARTMOVING_ALLOW_WRITES: "false",
+                },
+            },
+        },
+    };
+}
+function printMcpConfig(options) {
+    if (options.printHermes) {
+        console.log(`mcp_servers:\n  smartmoving:\n    command: "npx"\n    args:\n      - "-y"\n      - "smartmoving-mcp-server"\n    env:\n      SMARTMOVING_API_KEY: "\${SMARTMOVING_API_KEY}"\n      SMARTMOVING_ALLOW_WRITES: "false"\n    timeout: 120\n    connect_timeout: 60`);
+        return;
+    }
+    if (options.printClaude) {
+        console.log(formatJson(mcpJsonConfig()));
+        return;
+    }
+    console.log(formatJson(mcpJsonConfig()));
 }
 function dueDateOf(followup) {
     if (!followup || typeof followup !== "object") {
@@ -73,8 +159,45 @@ program
     .name("smartmoving")
     .description("Read-only CLI for the SmartMoving External API v1")
     .version("0.1.0")
+    .addOption(jsonOption())
+    .addOption(new Option("--plain", "prefer plain text output for commands that support it"))
+    .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
+    .addOption(new Option("--verbose", "print extra diagnostic detail where supported"))
+    .addOption(new Option("--no-color", "disable color output"))
+    .addOption(profileOption())
     .showHelpAfterError()
     .showSuggestionAfterError();
+program
+    .command("init")
+    .description("Create SmartMoving CLI config without storing raw API keys.")
+    .addOption(jsonOption())
+    .addOption(profileOption())
+    .option("--api-key-env <name>", "environment variable that will hold the API key", DEFAULT_API_KEY_ENV)
+    .option("--api-key-stdin", "read an API key from stdin for validation only; the raw key is not stored")
+    .option("--base-url <url>", "SmartMoving API base URL", DEFAULT_BASE_URL)
+    .option("--yes", "accept defaults and do not prompt")
+    .option("--run-doctor", "run doctor after writing config")
+    .action((options) => runInit(options));
+program
+    .command("doctor")
+    .description("Check local SmartMoving CLI/MCP configuration and API connectivity.")
+    .addOption(jsonOption())
+    .addOption(profileOption())
+    .action(async (options) => {
+    const result = await runDoctor({ profile: options.profile ?? program.opts().profile });
+    printResult("Doctor", result, options);
+    if (!result.ok) {
+        process.exitCode = 1;
+    }
+});
+const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
+mcp
+    .command("config")
+    .description("Print MCP config snippets that reference environment variables, never raw API keys.")
+    .option("--print-hermes", "print a Hermes YAML snippet")
+    .option("--print-claude", "print a Claude Desktop JSON snippet")
+    .option("--print-json", "print generic MCP JSON")
+    .action((options) => printMcpConfig(options));
 program
     .command("ping")
     .description("Verify SmartMoving API connectivity and authentication.")
