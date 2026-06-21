@@ -20,6 +20,24 @@ npm start
 
 In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. See [`../docs/AGENT-INSTALL.md`](../docs/AGENT-INSTALL.md).
 
+## Read-only CLI MVP
+
+This package also builds a small `smartmoving` CLI for terminal agents, scripts, and debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
+
+```bash
+npm run build
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js ping
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference branches --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference move-sizes --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js customers get CUSTOMER_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js leads list --page-size 25 --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js opportunities get OPPORTUNITY_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js jobs get JOB_UUID --opportunity-id OPPORTUNITY_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js followups due --opportunity-id OPPORTUNITY_UUID --json
+```
+
+The CLI is read-only in this MVP. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
+
 ## Environment variables
 
 - `SMARTMOVING_API_KEY`, required

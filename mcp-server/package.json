@@ -19,7 +19,8 @@
   "main": "dist/index.js",
   "type": "module",
   "bin": {
-    "smartmoving-mcp-server": "dist/index.js"
+    "smartmoving-mcp-server": "dist/index.js",
+    "smartmoving": "dist/cli.js"
   },
   "scripts": {
     "build": "tsc",
@@ -30,6 +31,7 @@
   },
   "dependencies": {
     "@modelcontextprotocol/sdk": "^1.0.0",
+    "commander": "^12.1.0",
     "zod": "^3.22.0"
   },
   "devDependencies": {
