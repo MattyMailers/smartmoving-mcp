@@ -49,4 +49,15 @@ describe("operation registry", () => {
       exitCodes: { success: 0, failure: 1 },
     });
   });
+
+  it("includes agent guidance for schema consumers", () => {
+    expect(operationSchemaContract()).toMatchObject({
+      agentGuidance: {
+        startWith: ["smartmoving doctor --json", "smartmoving schema --json"],
+        readOnlyFirst: true,
+        wrapUntrustedFlag: "--wrap-untrusted",
+        secretHandling: expect.stringContaining("Never print API keys"),
+      },
+    });
+  });
 });

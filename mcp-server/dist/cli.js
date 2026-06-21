@@ -5,6 +5,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
+import { registerAgentCommand } from "./cli/agent.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
@@ -48,6 +49,7 @@ function profileOption() {
 function addReadOptions(command) {
     return command
         .addOption(jsonOption())
+        .addOption(new Option("--wrap-untrusted", "wrap SmartMoving CRM response data for agent-safe prompt processing"))
         .addOption(new Option("--plain", "prefer plain text output"))
         .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
         .addOption(new Option("--verbose", "print extra diagnostic detail where supported"));
@@ -59,7 +61,14 @@ function printResult(label, value, options) {
     console.log(wantsJson(options) ? formatJson(value) : formatHuman(label, value));
 }
 function printReadResult(label, value, options) {
-    console.log(wantsJson(options) ? formatJson({ ok: true, data: value }) : formatHuman(label, value));
+    if (wantsJson(options)) {
+        const payload = options.wrapUntrusted
+            ? { ok: true, source: "smartmoving", untrusted: true, data: value }
+            : { ok: true, data: value };
+        console.log(formatJson(payload));
+        return;
+    }
+    console.log(formatHuman(label, value));
 }
 async function runRead(label, options, action) {
     try {
@@ -370,6 +379,7 @@ program
     }
 });
 registerSchemaCommand(program, { jsonOption, printResult });
+registerAgentCommand(program, { jsonOption, printResult, formatJson, formatError });
 const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
 mcp
     .command("config")

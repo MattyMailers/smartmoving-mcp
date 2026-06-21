@@ -6,6 +6,7 @@ import { readFile } from "node:fs/promises";
 import { basename } from "node:path";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
+import { registerAgentCommand } from "./cli/agent.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
@@ -13,6 +14,7 @@ import { registerSchemaCommand } from "./operations/register-cli.js";
 
 interface GlobalOptions {
   json?: boolean;
+  wrapUntrusted?: boolean;
   allowWrites?: boolean;
   allowDestructive?: boolean;
   plain?: boolean;
@@ -134,6 +136,7 @@ function profileOption(): Option {
 function addReadOptions(command: Command): Command {
   return command
     .addOption(jsonOption())
+    .addOption(new Option("--wrap-untrusted", "wrap SmartMoving CRM response data for agent-safe prompt processing"))
     .addOption(new Option("--plain", "prefer plain text output"))
     .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
     .addOption(new Option("--verbose", "print extra diagnostic detail where supported"));
@@ -148,7 +151,15 @@ function printResult(label: string, value: unknown, options: GlobalOptions): voi
 }
 
 function printReadResult(label: string, value: unknown, options: GlobalOptions): void {
-  console.log(wantsJson(options) ? formatJson({ ok: true, data: value }) : formatHuman(label, value));
+  if (wantsJson(options)) {
+    const payload = options.wrapUntrusted
+      ? { ok: true, source: "smartmoving", untrusted: true, data: value }
+      : { ok: true, data: value };
+    console.log(formatJson(payload));
+    return;
+  }
+
+  console.log(formatHuman(label, value));
 }
 
 async function runRead<T>(label: string, options: GlobalOptions, action: (client: SmartMovingClient) => Promise<T>): Promise<void> {
@@ -491,6 +502,7 @@ program
   });
 
 registerSchemaCommand(program, { jsonOption, printResult });
+registerAgentCommand(program, { jsonOption, printResult, formatJson, formatError });
 
 const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
 

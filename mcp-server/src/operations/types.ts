@@ -42,5 +42,12 @@ export interface OperationSchemaEntry {
 export interface OperationSchemaContract {
   ok: true;
   version: string;
+  agentGuidance: {
+    startWith: ["smartmoving doctor --json", "smartmoving schema --json"];
+    readOnlyFirst: true;
+    wrapUntrustedFlag: "--wrap-untrusted";
+    secretHandling: string;
+    privateDataHandling: string;
+  };
   operations: OperationSchemaEntry[];
 }
