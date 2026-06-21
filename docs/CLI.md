@@ -9,7 +9,7 @@ The `smartmoving` CLI is a read-only MVP built from the same TypeScript package 
 - Use the **MCP server** when an MCP-compatible agent should discover SmartMoving tools and call them through tool-use permissions.
 - Use the **CLI** when a terminal agent, script, or human wants explicit commands such as `smartmoving ping` or JSON output for piping into another program.
 - Both entrypoints use the same SmartMoving API client and environment variables.
-- This first CLI loop intentionally exposes a small read-only command set, not every MCP tool.
+- The CLI exposes the read-only SmartMoving operations from the current implementation. Write/destructive operations remain intentionally unavailable from the CLI.
 
 ## Safety posture
 
@@ -115,6 +115,19 @@ SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference move-size
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js leads list --page-size 10 --json
 ```
 
+## JSON output contract
+
+Read commands that call SmartMoving support `--json`, `--plain`, `--quiet`, and `--verbose`. Successful `--json` read output is wrapped for scripts:
+
+```json
+{
+  "ok": true,
+  "data": {}
+}
+```
+
+Read failures with `--json` return stable JSON with `ok: false` and redact API keys from error text.
+
 ## Commands in the MVP
 
 ```bash
@@ -127,12 +140,41 @@ smartmoving mcp config --print-json
 smartmoving schema --json
 smartmoving schema --group leads --json
 smartmoving schema --safety read --json
+smartmoving reference all --json
 smartmoving reference branches --json
 smartmoving reference move-sizes --json
+smartmoving reference referral-sources --json
+smartmoving reference service-types --json
+smartmoving reference tariffs --json
+smartmoving reference tariff-materials <tariffId> --json
+smartmoving reference users --json
+smartmoving reference arrival-windows --json
+smartmoving reference bad-lead-reasons --json
+smartmoving reference cancellation-reasons --json
+smartmoving reference lost-reasons --json
+smartmoving customers list --page-size 25 --json
 smartmoving customers get <customerId> --json
+smartmoving customers search <query> --json
+smartmoving customers opportunities <customerId> --json
+smartmoving customers storage-accounts <customerId> --json
+smartmoving customers service-tickets <customerId> --json
 smartmoving leads list --page-size 25 --json
+smartmoving leads get <leadId> --json
+smartmoving leads by-salesperson <userId> --json
+smartmoving leads statuses --json
 smartmoving opportunities get <opportunityId> --json
+smartmoving opportunities by-quote <quoteNumber> --json
+smartmoving opportunities audit <opportunityId> --json
+smartmoving opportunities documents <opportunityId> --json
+smartmoving opportunities payments <opportunityId> --json
+smartmoving jobs by-opportunity <opportunityId> --json
 smartmoving jobs get <jobId> --opportunity-id <opportunityId> --json
+smartmoving jobs notes <jobId> --opportunity-id <opportunityId> --json
+smartmoving inventory opportunity <opportunityId> --json
+smartmoving inventory master --json
+smartmoving inventory room-types --json
+smartmoving followups list --opportunity-id <opportunityId> --json
+smartmoving followups get <followupId> --opportunity-id <opportunityId> --json
 smartmoving followups due --opportunity-id <opportunityId> --json
 ```
 
@@ -141,7 +183,7 @@ Notes:
 - `schema --json` prints the shared operation registry contract for all 62 MCP tools without requiring an API key. It includes each operation name, group, safety level, CLI metadata, MCP tool name, output modes, and stable exit codes.
 - Use `schema --group <group> --json` or `schema --safety <read|write|destructive> --json` to filter schema output for agents and command generators.
 - `jobs get` requires the parent opportunity ID because the SmartMoving v1 Premium job detail endpoint is nested under an opportunity.
-- `followups due` is scoped to one opportunity because the current SmartMoving v1 API surface does not expose an account-wide due-followups endpoint.
+- `followups list`, `followups get`, and `followups due` are scoped to one opportunity because the current SmartMoving v1 API surface does not expose an account-wide due-followups endpoint.
 - Use `--json` for machine-readable output. Without `--json`, the CLI prints a simple human-readable wrapper around the API response.
 
 ## Future npm/npx usage
@@ -165,7 +207,7 @@ Depending on npm binary resolution, users may also install globally or run the p
 
 - Write commands.
 - Destructive commands.
-- Generated executable CLI commands for every MCP operation (the schema lists all 62 operations, but the executable CLI remains a smaller read-only MVP).
+- Generated executable CLI commands for write/destructive MCP operations (the schema lists all 62 operations, but the executable CLI remains read-only).
 - Live API tests in CI.
 - npm publishing.
 - Splitting a dedicated `smartmoving-cli` package.

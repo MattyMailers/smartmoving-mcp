@@ -21,6 +21,12 @@ interface CapturedRequest {
   headers: IncomingMessage["headers"];
 }
 
+interface ReadCommandCase {
+  name: string;
+  args: string[];
+  expectedPath: string;
+}
+
 async function runCli(args: string[], env: Record<string, string | undefined> = {}): Promise<CliResult> {
   const child = spawn(process.execPath, [...cliArgs, ...args], {
     cwd: process.cwd(),
@@ -81,6 +87,41 @@ function jsonResponse(response: ServerResponse, statusCode: number, body: unknow
   response.end(JSON.stringify(body));
 }
 
+function expectJsonOk(stdout: string, data: unknown): void {
+  expect(JSON.parse(stdout)).toEqual({ ok: true, data });
+}
+
+const readCommandCases: ReadCommandCase[] = [
+  { name: "customers list", args: ["customers", "list", "--page-size", "25", "--json"], expectedPath: "/v1/api/customers?Page=1&PageSize=25&IncludeOpportunityInfo=false" },
+  { name: "customers search", args: ["customers", "search", "Alice", "--json"], expectedPath: "/v1/api/premium/customers/search?searchQuery=Alice" },
+  { name: "customers opportunities", args: ["customers", "opportunities", "customer-1", "--json"], expectedPath: "/v1/api/customers/customer-1/opportunities" },
+  { name: "customers storage-accounts", args: ["customers", "storage-accounts", "customer-1", "--json"], expectedPath: "/v1/api/customers/customer-1/storage-accounts" },
+  { name: "customers service-tickets", args: ["customers", "service-tickets", "customer-1", "--json"], expectedPath: "/v1/api/premium/customers/customer-1/service-tickets" },
+  { name: "leads get", args: ["leads", "get", "lead-1", "--json"], expectedPath: "/v1/api/leads/lead-1" },
+  { name: "leads by-salesperson", args: ["leads", "by-salesperson", "user-1", "--json"], expectedPath: "/v1/api/premium/leads/sales/user-1" },
+  { name: "leads statuses", args: ["leads", "statuses", "--json"], expectedPath: "/v1/api/leads/statuses" },
+  { name: "opportunities by-quote", args: ["opportunities", "by-quote", "Q-123", "--json"], expectedPath: "/v1/api/opportunities/quote/Q-123" },
+  { name: "opportunities audit", args: ["opportunities", "audit", "opp-1", "--json"], expectedPath: "/v1/api/opportunities/opp-1/audit-activity" },
+  { name: "opportunities documents", args: ["opportunities", "documents", "opp-1", "--json"], expectedPath: "/v1/api/premium/opportunities/opp-1/documents" },
+  { name: "opportunities payments", args: ["opportunities", "payments", "opp-1", "--json"], expectedPath: "/v1/api/payments/opportunities/opp-1" },
+  { name: "jobs by-opportunity", args: ["jobs", "by-opportunity", "opp-1", "--json"], expectedPath: "/v1/api/opportunities/opp-1/jobs" },
+  { name: "jobs notes", args: ["jobs", "notes", "job-1", "--opportunity-id", "opp-1", "--json"], expectedPath: "/v1/api/premium/opportunities/opp-1/jobs/job-1?IncludeNotes=true" },
+  { name: "inventory opportunity", args: ["inventory", "opportunity", "opp-1", "--json"], expectedPath: "/v1/api/premium/opportunities/opp-1/inventory" },
+  { name: "inventory master", args: ["inventory", "master", "--json"], expectedPath: "/v1/api/premium/inventory" },
+  { name: "inventory room-types", args: ["inventory", "room-types", "--json"], expectedPath: "/v1/api/premium/room-types" },
+  { name: "followups list", args: ["followups", "list", "--opportunity-id", "opp-1", "--json"], expectedPath: "/v1/api/premium/opportunities/opp-1/followups" },
+  { name: "followups get", args: ["followups", "get", "followup-1", "--opportunity-id", "opp-1", "--json"], expectedPath: "/v1/api/premium/opportunities/opp-1/followups/followup-1" },
+  { name: "reference referral-sources", args: ["reference", "referral-sources", "--json"], expectedPath: "/v1/api/referral-sources" },
+  { name: "reference service-types", args: ["reference", "service-types", "--json"], expectedPath: "/v1/api/service-types" },
+  { name: "reference tariffs", args: ["reference", "tariffs", "--json"], expectedPath: "/v1/api/tariffs" },
+  { name: "reference tariff-materials", args: ["reference", "tariff-materials", "tariff-1", "--json"], expectedPath: "/v1/api/premium/tariffs/tariff-1/materials" },
+  { name: "reference users", args: ["reference", "users", "--json"], expectedPath: "/v1/api/users" },
+  { name: "reference arrival-windows", args: ["reference", "arrival-windows", "--json"], expectedPath: "/v1/api/arrival-windows" },
+  { name: "reference bad-lead-reasons", args: ["reference", "bad-lead-reasons", "--json"], expectedPath: "/v1/api/bad-lead-reasons" },
+  { name: "reference cancellation-reasons", args: ["reference", "cancellation-reasons", "--json"], expectedPath: "/v1/api/cancellation-reasons" },
+  { name: "reference lost-reasons", args: ["reference", "lost-reasons", "--json"], expectedPath: "/v1/api/lost-reasons" },
+];
+
 describe("SmartMoving CLI", () => {
   afterEach(() => {
     delete process.env.SMARTMOVING_API_KEY;
@@ -91,9 +132,10 @@ describe("SmartMoving CLI", () => {
     const result = await runCli(["ping", "--json"]);
 
     expect(result.code).toBe(1);
-    expect(result.stderr).toContain("SMARTMOVING_API_KEY environment variable is required");
-    expect(result.stderr).toContain("do not pass API keys as CLI arguments");
-    expect(result.stdout).toBe("");
+    expect(result.stderr).toBe("");
+    expect(result.stdout).toContain("SMARTMOVING_API_KEY environment variable is required");
+    expect(result.stdout).toContain("do not pass API keys as CLI arguments");
+    expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, error: { code: "READ_FAILED" } });
   });
 
   it("ping --json calls /api/ping and prints JSON", async () => {
@@ -107,7 +149,7 @@ describe("SmartMoving CLI", () => {
 
         expect(result.code).toBe(0);
         expect(result.stderr).toBe("");
-        expect(JSON.parse(result.stdout)).toEqual({ ok: true });
+        expectJsonOk(result.stdout, { ok: true });
         expect(requests).toHaveLength(1);
         expect(requests[0]).toMatchObject({ method: "GET", path: "/v1/api/ping" });
         expect(requests[0]?.headers["x-api-key"]).toBe(testApiKey);
@@ -125,7 +167,7 @@ describe("SmartMoving CLI", () => {
         });
 
         expect(result.code).toBe(0);
-        expect(JSON.parse(result.stdout)).toEqual([{ id: "branch-1", name: "Test Branch" }]);
+        expectJsonOk(result.stdout, [{ id: "branch-1", name: "Test Branch" }]);
         expect(requests).toHaveLength(1);
         expect(requests[0]).toMatchObject({ method: "GET", path: "/v1/api/branches" });
       },
@@ -142,7 +184,7 @@ describe("SmartMoving CLI", () => {
         });
 
         expect(result.code).toBe(0);
-        expect(JSON.parse(result.stdout)).toEqual({ items: [] });
+        expectJsonOk(result.stdout, { items: [] });
         expect(requests).toHaveLength(1);
         expect(requests[0]).toMatchObject({ method: "GET", path: "/v1/api/leads?page=1&pageSize=25" });
       },
@@ -159,10 +201,70 @@ describe("SmartMoving CLI", () => {
         });
 
         expect(result.code).toBe(1);
-        expect(result.stderr).toContain("SmartMoving API error: HTTP 401");
-        expect(result.stderr).toContain("[REDACTED]");
-        expect(result.stderr).not.toContain(testApiKey);
-        expect(result.stdout).toBe("");
+        expect(result.stderr).toBe("");
+        expect(result.stdout).toContain("SmartMoving API error: HTTP 401");
+        expect(result.stdout).toContain("[REDACTED]");
+        expect(result.stdout).not.toContain(testApiKey);
+        expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, error: { code: "READ_FAILED" } });
+      },
+    );
+  });
+
+  it.each(readCommandCases)("$name --json calls the expected read endpoint", async ({ args, expectedPath }) => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { fixture: true }),
+      async (baseUrl, requests) => {
+        const result = await runCli(args, {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expectJsonOk(result.stdout, { fixture: true });
+        expect(requests).toHaveLength(1);
+        expect(requests[0]).toMatchObject({ method: "GET", path: expectedPath });
+      },
+    );
+  });
+
+  it("reference all --json fetches each reference endpoint", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { fixture: true }),
+      async (baseUrl, requests) => {
+        const result = await runCli(["reference", "all", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        const output = JSON.parse(result.stdout);
+        expect(output.ok).toBe(true);
+        expect(Object.keys(output.data)).toEqual([
+          "branches",
+          "moveSizes",
+          "referralSources",
+          "serviceTypes",
+          "tariffs",
+          "users",
+          "arrivalWindows",
+          "badLeadReasons",
+          "cancellationReasons",
+          "lostReasons",
+        ]);
+        expect(requests.map((request) => request.path)).toEqual([
+          "/v1/api/branches",
+          "/v1/api/move-sizes",
+          "/v1/api/referral-sources",
+          "/v1/api/service-types",
+          "/v1/api/tariffs",
+          "/v1/api/users",
+          "/v1/api/arrival-windows",
+          "/v1/api/bad-lead-reasons",
+          "/v1/api/cancellation-reasons",
+          "/v1/api/lost-reasons",
+        ]);
       },
     );
   });

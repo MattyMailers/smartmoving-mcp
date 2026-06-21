@@ -30,17 +30,34 @@ function jsonOption() {
 function profileOption() {
     return new Option("--profile <name>", "SmartMoving CLI config profile");
 }
+function addReadOptions(command) {
+    return command
+        .addOption(jsonOption())
+        .addOption(new Option("--plain", "prefer plain text output"))
+        .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
+        .addOption(new Option("--verbose", "print extra diagnostic detail where supported"));
+}
+function wantsJson(options) {
+    return options.json === true || program.opts().json === true;
+}
 function printResult(label, value, options) {
-    const json = options.json === true || program.opts().json === true;
-    console.log(json ? formatJson(value) : formatHuman(label, value));
+    console.log(wantsJson(options) ? formatJson(value) : formatHuman(label, value));
+}
+function printReadResult(label, value, options) {
+    console.log(wantsJson(options) ? formatJson({ ok: true, data: value }) : formatHuman(label, value));
 }
 async function runRead(label, options, action) {
     try {
         const result = await action(requireClient());
-        printResult(label, result, options);
+        printReadResult(label, result, options);
     }
     catch (error) {
-        console.error(`Error: ${formatError(error)}`);
+        if (wantsJson(options)) {
+            console.log(formatJson({ ok: false, error: { code: "READ_FAILED", message: formatError(error) } }));
+        }
+        else {
+            console.error(`Error: ${formatError(error)}`);
+        }
         process.exitCode = 1;
     }
 }
@@ -200,36 +217,103 @@ mcp
     .option("--print-claude", "print a Claude Desktop JSON snippet")
     .option("--print-json", "print generic MCP JSON")
     .action((options) => printMcpConfig(options));
-program
+addReadOptions(program
     .command("ping")
-    .description("Verify SmartMoving API connectivity and authentication.")
-    .addOption(jsonOption())
+    .description("Verify SmartMoving API connectivity and authentication."))
     .action((options) => runRead("Ping", options, (client) => client.get("/api/ping")));
 const reference = program.command("reference").description("Read SmartMoving reference data.");
-reference
+async function getAllReferenceData(client) {
+    const [branches, moveSizes, referralSources, serviceTypes, tariffs, users, arrivalWindows, badLeadReasons, cancellationReasons, lostReasons] = await Promise.all([
+        client.get("/api/branches"),
+        client.get("/api/move-sizes"),
+        client.get("/api/referral-sources"),
+        client.get("/api/service-types"),
+        client.get("/api/tariffs"),
+        client.get("/api/users"),
+        client.get("/api/arrival-windows"),
+        client.get("/api/bad-lead-reasons"),
+        client.get("/api/cancellation-reasons"),
+        client.get("/api/lost-reasons"),
+    ]);
+    return { branches, moveSizes, referralSources, serviceTypes, tariffs, users, arrivalWindows, badLeadReasons, cancellationReasons, lostReasons };
+}
+addReadOptions(reference
+    .command("all")
+    .description("Fetch commonly used SmartMoving reference data in one read-only response."))
+    .action((options) => runRead("Reference data", options, (client) => getAllReferenceData(client)));
+addReadOptions(reference
     .command("branches")
-    .description("List SmartMoving branches/office locations.")
-    .addOption(jsonOption())
+    .description("List SmartMoving branches/office locations."))
     .action((options) => runRead("Branches", options, (client) => client.get("/api/branches")));
-reference
+addReadOptions(reference
     .command("move-sizes")
-    .description("List SmartMoving move size reference values.")
-    .addOption(jsonOption())
+    .description("List SmartMoving move size reference values."))
     .action((options) => runRead("Move sizes", options, (client) => client.get("/api/move-sizes")));
+for (const [commandName, label, path] of [
+    ["referral-sources", "Referral sources", "/api/referral-sources"],
+    ["service-types", "Service types", "/api/service-types"],
+    ["tariffs", "Tariffs", "/api/tariffs"],
+    ["users", "Users", "/api/users"],
+    ["arrival-windows", "Arrival windows", "/api/arrival-windows"],
+    ["bad-lead-reasons", "Bad lead reasons", "/api/bad-lead-reasons"],
+    ["cancellation-reasons", "Cancellation reasons", "/api/cancellation-reasons"],
+    ["lost-reasons", "Lost reasons", "/api/lost-reasons"],
+]) {
+    addReadOptions(reference.command(commandName).description(`Read SmartMoving ${label.toLowerCase()}.`))
+        .action((options) => runRead(label, options, (client) => client.get(path)));
+}
+addReadOptions(reference
+    .command("tariff-materials")
+    .description("List materials available under a tariff.")
+    .argument("<tariffId>", "tariff UUID"))
+    .action((tariffId, options) => runRead("Tariff materials", options, (client) => client.get(`/api/premium/tariffs/${tariffId}/materials`)));
 const customers = program.command("customers").description("Read customer records.");
-customers
+addReadOptions(customers
+    .command("list")
+    .description("List customers with pagination.")
+    .option("--page <page>", "page number", "1")
+    .option("--page-size <pageSize>", "records per page, max 100", "25")
+    .option("--from-service-date <date>", "filter customers with service on or after this ISO date")
+    .option("--to-service-date <date>", "filter customers with service on or before this ISO date")
+    .option("--include-opportunity-info", "include opportunity count and revenue summary"))
+    .action((options) => runRead("Customers", options, (client) => {
+    const page = positiveInteger(options.page ?? "1", "--page");
+    const pageSize = positiveInteger(options.pageSize ?? "25", "--page-size");
+    if (pageSize > 100) {
+        throw new Error("--page-size must be 100 or less.");
+    }
+    return client.get("/api/customers", {
+        Page: page,
+        PageSize: pageSize,
+        FromServiceDate: options.fromServiceDate,
+        ToServiceDate: options.toServiceDate,
+        IncludeOpportunityInfo: options.includeOpportunityInfo === true,
+    });
+}));
+addReadOptions(customers
     .command("get")
     .description("Get a customer by UUID.")
-    .argument("<customerId>", "customer UUID")
-    .addOption(jsonOption())
+    .argument("<customerId>", "customer UUID"))
     .action((customerId, options) => runRead("Customer", options, (client) => client.get(`/api/customers/${customerId}`)));
+addReadOptions(customers
+    .command("search")
+    .description("Search customers by name, phone, or email.")
+    .argument("<query>", "search query, at least 3 characters"))
+    .action((query, options) => runRead("Customers", options, (client) => client.get("/api/premium/customers/search", { searchQuery: query })));
+for (const [commandName, label, pathFor] of [
+    ["opportunities", "Customer opportunities", (customerId) => `/api/customers/${customerId}/opportunities`],
+    ["storage-accounts", "Customer storage accounts", (customerId) => `/api/customers/${customerId}/storage-accounts`],
+    ["service-tickets", "Customer service tickets", (customerId) => `/api/premium/customers/${customerId}/service-tickets`],
+]) {
+    addReadOptions(customers.command(commandName).description(`Read ${label.toLowerCase()}.`).argument("<customerId>", "customer UUID"))
+        .action((customerId, options) => runRead(label, options, (client) => client.get(pathFor(customerId))));
+}
 const leads = program.command("leads").description("Read lead records.");
-leads
+addReadOptions(leads
     .command("list")
     .description("List leads with pagination.")
     .option("--page <page>", "page number", "1")
-    .option("--page-size <pageSize>", "records per page, max 100", "25")
-    .addOption(jsonOption())
+    .option("--page-size <pageSize>", "records per page, max 100", "25"))
     .action((options) => runRead("Leads", options, (client) => {
     const page = positiveInteger(options.page ?? "1", "--page");
     const pageSize = positiveInteger(options.pageSize ?? "25", "--page-size");
@@ -238,8 +322,22 @@ leads
     }
     return client.get("/api/leads", { page, pageSize });
 }));
+addReadOptions(leads
+    .command("get")
+    .description("Get a lead by UUID.")
+    .argument("<leadId>", "lead UUID"))
+    .action((leadId, options) => runRead("Lead", options, (client) => client.get(`/api/leads/${leadId}`)));
+addReadOptions(leads
+    .command("by-salesperson")
+    .description("List leads assigned to a salesperson.")
+    .argument("<userId>", "salesperson user UUID"))
+    .action((userId, options) => runRead("Leads", options, (client) => client.get(`/api/premium/leads/sales/${userId}`)));
+addReadOptions(leads
+    .command("statuses")
+    .description("List possible lead statuses."))
+    .action((options) => runRead("Lead statuses", options, (client) => client.get("/api/leads/statuses")));
 const opportunities = program.command("opportunities").description("Read opportunity records.");
-opportunities
+addReadOptions(opportunities
     .command("get")
     .description("Get an opportunity by UUID.")
     .argument("<opportunityId>", "opportunity UUID")
@@ -248,8 +346,7 @@ opportunities
     .option("--include-payments", "include payments")
     .option("--include-documents", "include documents")
     .option("--include-rooms", "include room inventory")
-    .option("--include-audit", "include audit activity")
-    .addOption(jsonOption())
+    .option("--include-audit", "include audit activity"))
     .action((opportunityId, options) => runRead("Opportunity", options, (client) => client.get(`/api/opportunities/${opportunityId}`, {
     IncludeJobs: options.includeJobs,
     IncludeFollowUps: options.includeFollowUps,
@@ -258,8 +355,26 @@ opportunities
     IncludeRooms: options.includeRooms,
     IncludeAudit: options.includeAudit,
 })));
+addReadOptions(opportunities
+    .command("by-quote")
+    .description("Look up an opportunity by quote number.")
+    .argument("<quoteNumber>", "quote number"))
+    .action((quoteNumber, options) => runRead("Opportunity", options, (client) => client.get(`/api/opportunities/quote/${encodeURIComponent(quoteNumber)}`)));
+for (const [commandName, label, pathFor] of [
+    ["audit", "Opportunity audit", (opportunityId) => `/api/opportunities/${opportunityId}/audit-activity`],
+    ["documents", "Opportunity documents", (opportunityId) => `/api/premium/opportunities/${opportunityId}/documents`],
+    ["payments", "Opportunity payments", (opportunityId) => `/api/payments/opportunities/${opportunityId}`],
+]) {
+    addReadOptions(opportunities.command(commandName).description(`Read ${label.toLowerCase()}.`).argument("<opportunityId>", "opportunity UUID"))
+        .action((opportunityId, options) => runRead(label, options, (client) => client.get(pathFor(opportunityId))));
+}
 const jobs = program.command("jobs").description("Read job records.");
-jobs
+addReadOptions(jobs
+    .command("by-opportunity")
+    .description("List all jobs for an opportunity.")
+    .argument("<opportunityId>", "opportunity UUID"))
+    .action((opportunityId, options) => runRead("Jobs", options, (client) => client.get(`/api/opportunities/${opportunityId}/jobs`)));
+addReadOptions(jobs
     .command("get")
     .description("Get a premium job by UUID. SmartMoving requires the parent opportunity UUID.")
     .argument("<jobId>", "job UUID")
@@ -271,8 +386,7 @@ jobs
     .option("--include-stops", "include stops")
     .option("--include-dispatch-info", "include dispatch information")
     .option("--include-charges", "include SmartMoving catch-all charges")
-    .option("--include-notes", "include notes")
-    .addOption(jsonOption())
+    .option("--include-notes", "include notes"))
     .action((jobId, options) => runRead("Job", options, (client) => client.get(`/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}`, {
     IncludeEstimatedCharges: options.includeEstimatedCharges,
     IncludeActualCharges: options.includeActualCharges,
@@ -283,14 +397,44 @@ jobs
     IncludeCharges: options.includeCharges,
     IncludeNotes: options.includeNotes,
 })));
+addReadOptions(jobs
+    .command("notes")
+    .description("Read all note fields on a job.")
+    .argument("<jobId>", "job UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+    .action((jobId, options) => runRead("Job notes", options, (client) => client.get(`/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}`, { IncludeNotes: true })));
+const inventory = program.command("inventory").description("Read opportunity inventory data.");
+addReadOptions(inventory
+    .command("opportunity")
+    .description("Get the full inventory for an opportunity.")
+    .argument("<opportunityId>", "opportunity UUID"))
+    .action((opportunityId, options) => runRead("Opportunity inventory", options, (client) => client.get(`/api/premium/opportunities/${opportunityId}/inventory`)));
+addReadOptions(inventory
+    .command("master")
+    .description("Get the master inventory catalog."))
+    .action((options) => runRead("Master inventory", options, (client) => client.get("/api/premium/inventory")));
+addReadOptions(inventory
+    .command("room-types")
+    .description("Get available inventory room types."))
+    .action((options) => runRead("Room types", options, (client) => client.get("/api/premium/room-types")));
 const followups = program.command("followups").description("Read follow-up records.");
-followups
+addReadOptions(followups
+    .command("list")
+    .description("List follow-ups for one opportunity.")
+    .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID to inspect"))
+    .action((options) => runRead("Follow-ups", options, (client) => client.get(`/api/premium/opportunities/${options.opportunityId}/followups`)));
+addReadOptions(followups
+    .command("get")
+    .description("Get one follow-up for an opportunity.")
+    .argument("<followupId>", "follow-up UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID to inspect"))
+    .action((followupId, options) => runRead("Follow-up", options, (client) => client.get(`/api/premium/opportunities/${options.opportunityId}/followups/${followupId}`)));
+addReadOptions(followups
     .command("due")
     .description("List due follow-ups for one opportunity. Account-wide due follow-ups are not exposed by the current SmartMoving v1 API spec.")
     .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID to inspect")
     .option("--now <isoDateTime>", "compare against this ISO date/time instead of the current time")
-    .option("--include-completed", "include completed follow-ups")
-    .addOption(jsonOption())
+    .option("--include-completed", "include completed follow-ups"))
     .action((options) => runRead("Due follow-ups", options, async (client) => {
     const now = options.now ? new Date(options.now) : new Date();
     if (Number.isNaN(now.getTime())) {

@@ -13,13 +13,13 @@ const operationMetadata = [
     "group": "customers",
     "safety": "read",
     "cli": {
-      "command": "customers list-customers",
+      "command": "customers list",
       "description": "List customers with pagination. Returns a paginated list of customer records from SmartMoving. Use this to browse or iterate through all customers in the system. Supports filtering by service date range.",
       "examples": [
-        "smartmoving customers list-customers --json"
+        "smartmoving customers list --json"
       ],
       "arguments": [],
-      "options": [],
+      "options": ["page", "page-size", "from-service-date", "to-service-date", "include-opportunity-info"],
       "requiredOptions": []
     },
     "mcp": {
@@ -53,10 +53,10 @@ const operationMetadata = [
     "group": "customers",
     "safety": "read",
     "cli": {
-      "command": "customers search-customers",
+      "command": "customers search",
       "description": "Search customers by name, phone, or email. Premium tier endpoint. The search query must be at least 3 characters. Use this when you need to find a customer by partial information rather than browsing the full list.",
       "examples": [
-        "smartmoving customers search-customers --json"
+        "smartmoving customers search <query> --json"
       ],
       "arguments": [],
       "options": [],
@@ -110,10 +110,10 @@ const operationMetadata = [
     "group": "customers",
     "safety": "read",
     "cli": {
-      "command": "customers get-customer-opportunities",
+      "command": "customers opportunities",
       "description": "List all opportunities (quotes/moves) associated with a specific customer. Returns an array of opportunity summaries for the given customer ID.",
       "examples": [
-        "smartmoving customers get-customer-opportunities --json"
+        "smartmoving customers opportunities <customerId> --json"
       ],
       "arguments": [],
       "options": [],
@@ -129,10 +129,10 @@ const operationMetadata = [
     "group": "customers",
     "safety": "read",
     "cli": {
-      "command": "customers get-customer-storage-accounts",
+      "command": "customers storage-accounts",
       "description": "List storage accounts for a specific customer. Returns storage unit details, monthly rates, and account status for the customer.",
       "examples": [
-        "smartmoving customers get-customer-storage-accounts --json"
+        "smartmoving customers storage-accounts <customerId> --json"
       ],
       "arguments": [],
       "options": [],
@@ -148,10 +148,10 @@ const operationMetadata = [
     "group": "customers",
     "safety": "read",
     "cli": {
-      "command": "customers get-customer-service-tickets",
+      "command": "customers service-tickets",
       "description": "List service tickets for a specific customer. Premium tier endpoint. Returns any open or resolved service tickets (claims, complaints, etc.) for the customer.",
       "examples": [
-        "smartmoving customers get-customer-service-tickets --json"
+        "smartmoving customers service-tickets <customerId> --json"
       ],
       "arguments": [],
       "options": [],
@@ -189,10 +189,10 @@ const operationMetadata = [
     "group": "leads",
     "safety": "read",
     "cli": {
-      "command": "leads get-lead",
+      "command": "leads get",
       "description": "Get detailed information about a specific lead by ID. Returns all lead details including contact info, move details, origin/destination addresses, and current status.",
       "examples": [
-        "smartmoving leads get-lead --json"
+        "smartmoving leads get <leadId> --json"
       ],
       "arguments": [
         "leadId"
@@ -267,10 +267,10 @@ const operationMetadata = [
     "group": "leads",
     "safety": "read",
     "cli": {
-      "command": "leads get-leads-by-salesperson",
+      "command": "leads by-salesperson",
       "description": "List leads assigned to a specific salesperson. Premium tier endpoint. Useful for viewing a sales rep's pipeline of uncontacted or in-progress leads.",
       "examples": [
-        "smartmoving leads get-leads-by-salesperson --json"
+        "smartmoving leads by-salesperson <userId> --json"
       ],
       "arguments": [],
       "options": [],
@@ -305,10 +305,10 @@ const operationMetadata = [
     "group": "leads",
     "safety": "read",
     "cli": {
-      "command": "leads get-lead-statuses",
+      "command": "leads statuses",
       "description": "Get all possible lead status values. Returns the list of statuses a lead can be in (e.g. New, Contacted, Qualified, Lost, BadLead, Converted). Useful for understanding lead status codes.",
       "examples": [
-        "smartmoving leads get-lead-statuses --json"
+        "smartmoving leads statuses --json"
       ],
       "arguments": [],
       "options": [],
@@ -352,10 +352,10 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "read",
     "cli": {
-      "command": "opportunities get-opportunity-by-quote",
+      "command": "opportunities by-quote",
       "description": "Look up an opportunity by its quote number (e.g. 'Q-12345'). Use this when you have a quote number but not the opportunity UUID. Returns the same detailed view as get_opportunity.",
       "examples": [
-        "smartmoving opportunities get-opportunity-by-quote --json"
+        "smartmoving opportunities by-quote <quoteNumber> --json"
       ],
       "arguments": [],
       "options": [],
@@ -409,7 +409,7 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "read",
     "cli": {
-      "command": "opportunities get-opportunity-audit",
+      "command": "opportunities audit",
       "description": "Get the audit trail / activity log for an opportunity. Shows a chronological history of all changes, status transitions, and actions performed on the opportunity.",
       "examples": [
         "smartmoving opportunities get-opportunity-audit --json"
@@ -428,7 +428,7 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "read",
     "cli": {
-      "command": "opportunities get-opportunity-documents",
+      "command": "opportunities documents",
       "description": "List all documents attached to an opportunity. Premium tier endpoint. Returns file metadata including name, category, URL, and upload date.",
       "examples": [
         "smartmoving opportunities get-opportunity-documents --json"
@@ -447,7 +447,7 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "read",
     "cli": {
-      "command": "opportunities get-opportunity-payments",
+      "command": "opportunities payments",
       "description": "List all payments recorded for an opportunity. Returns payment details including type, amount, date, and reference numbers.",
       "examples": [
         "smartmoving opportunities get-opportunity-payments --json"
@@ -504,7 +504,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "read",
     "cli": {
-      "command": "jobs get-jobs-by-opportunity",
+      "command": "jobs by-opportunity",
       "description": "List all jobs for an opportunity. A job represents a specific service event (moving day, packing day, etc.) within an opportunity. An opportunity can have multiple jobs (e.g. separate packing and moving days).",
       "examples": [
         "smartmoving jobs get-jobs-by-opportunity --json"
@@ -614,7 +614,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "read",
     "cli": {
-      "command": "jobs get-job-notes",
+      "command": "jobs notes",
       "description": "Read all note fields on a specific job. This calls Premium job detail with IncludeNotes=true and returns crew, customer, internal, accounting, dispatcher notes, plus crew feedback when present. Use this before update_job_notes so you don't accidentally replace existing note text.",
       "examples": [
         "smartmoving jobs get-job-notes --json"
@@ -712,7 +712,7 @@ const operationMetadata = [
     "group": "inventory",
     "safety": "read",
     "cli": {
-      "command": "inventory get-opportunity-inventory",
+      "command": "inventory opportunity",
       "description": "Get the full inventory for an opportunity. Premium tier endpoint. Returns all rooms and their inventory items with quantities, weights, and volumes. This gives a complete picture of what the customer is moving.",
       "examples": [
         "smartmoving inventory get-opportunity-inventory --json"
@@ -807,7 +807,7 @@ const operationMetadata = [
     "group": "inventory",
     "safety": "read",
     "cli": {
-      "command": "inventory get-master-inventory",
+      "command": "inventory master",
       "description": "Get the master inventory catalog. Premium tier endpoint. Returns all available inventory items that can be added to an opportunity (e.g. 'Sofa', 'Queen Bed', 'Box - Large'). Each item has a default weight and volume. Use the item IDs when calling add_inventory_items.",
       "examples": [
         "smartmoving inventory get-master-inventory --json"
@@ -826,7 +826,7 @@ const operationMetadata = [
     "group": "inventory",
     "safety": "read",
     "cli": {
-      "command": "inventory get-room-types",
+      "command": "inventory room-types",
       "description": "Get all available room types. Premium tier endpoint. Returns the catalog of room types (e.g. 'Living Room', 'Master Bedroom', 'Kitchen', 'Garage') that can be used when creating rooms for an opportunity's inventory.",
       "examples": [
         "smartmoving inventory get-room-types --json"
@@ -1040,7 +1040,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-referral-sources",
+      "command": "reference referral-sources",
       "description": "Get all referral sources (how customers find the company). Examples: 'Google', 'Yelp', 'Referral', 'Website'. A referral source ID is REQUIRED when creating leads and opportunities. Always call this first to get valid IDs.",
       "examples": [
         "smartmoving reference get-referral-sources --json"
@@ -1059,7 +1059,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-service-types",
+      "command": "reference service-types",
       "description": "Get all service types offered (e.g. 'Local Moving', 'Long Distance', 'Packing Only', 'Storage'). Service type IDs are used when creating leads and opportunities to categorize the type of service requested.",
       "examples": [
         "smartmoving reference get-service-types --json"
@@ -1078,7 +1078,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-tariffs",
+      "command": "reference tariffs",
       "description": "Get all tariffs (rate sheets / pricing structures). Tariffs define hourly rates, minimums, and material pricing. A tariff ID can be assigned to an opportunity to control pricing. Each tariff may be tied to a specific branch.",
       "examples": [
         "smartmoving reference get-tariffs --json"
@@ -1097,7 +1097,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-tariff-materials",
+      "command": "reference tariff-materials",
       "description": "Get materials available under a specific tariff. Premium tier endpoint. Returns packing materials (boxes, tape, paper, etc.) with their unit prices. Material IDs are used when adding materials to jobs via add_job_materials.",
       "examples": [
         "smartmoving reference get-tariff-materials --json"
@@ -1116,7 +1116,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-users",
+      "command": "reference users",
       "description": "Get all users in the SmartMoving account. Returns salespeople, dispatchers, managers, and other staff. User IDs are needed when assigning leads, opportunities, follow-ups, or filtering by salesperson.",
       "examples": [
         "smartmoving reference get-users --json"
@@ -1135,7 +1135,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-arrival-windows",
+      "command": "reference arrival-windows",
       "description": "Get all arrival window options (e.g. '8AM-10AM', '10AM-12PM'). Arrival windows define the time range when the crew is expected to arrive at the customer's location. IDs are used when creating or updating opportunities.",
       "examples": [
         "smartmoving reference get-arrival-windows --json"
@@ -1154,7 +1154,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-bad-lead-reasons",
+      "command": "reference bad-lead-reasons",
       "description": "Get all bad lead reason options. These are used when marking a lead as 'Bad Lead' to categorize why (e.g. 'Spam', 'Out of Service Area', 'Duplicate').",
       "examples": [
         "smartmoving reference get-bad-lead-reasons --json"
@@ -1173,7 +1173,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-cancellation-reasons",
+      "command": "reference cancellation-reasons",
       "description": "Get all cancellation reason options. These are required when changing an opportunity's status to Cancelled (status=20). Examples: 'Customer Changed Plans', 'Price Too High', 'Went With Competitor'.",
       "examples": [
         "smartmoving reference get-cancellation-reasons --json"
@@ -1192,7 +1192,7 @@ const operationMetadata = [
     "group": "reference",
     "safety": "read",
     "cli": {
-      "command": "reference get-lost-reasons",
+      "command": "reference lost-reasons",
       "description": "Get all lost reason options. These are required when changing an opportunity's status to Lost (status=30). Similar to cancellation reasons but for opportunities that were never booked.",
       "examples": [
         "smartmoving reference get-lost-reasons --json"
