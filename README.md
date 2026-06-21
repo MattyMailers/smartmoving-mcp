@@ -32,6 +32,7 @@ smartmoving-api/
 │   ├── AGENT-INSTALL.md
 │   ├── AUTHENTICATION.md
 │   ├── BEST-PRACTICES.md
+│   ├── CLI.md
 │   ├── ENDPOINTS.md
 │   ├── ENUMS.md
 │   ├── OPPORTUNITY-V1-V2-LIMITATIONS.md
@@ -70,6 +71,31 @@ npm start
 ```
 
 The server uses stdio, so it is normally launched by an MCP client rather than run manually in a terminal.
+
+## SmartMoving CLI read-only MVP
+
+This repo also includes an **unofficial, read-only `smartmoving` CLI MVP** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and environment variables as the MCP server, but it is intentionally much smaller than the full MCP tool catalog.
+
+MCP vs CLI positioning:
+
+- Use the MCP server for agent-native tool discovery and controlled MCP tool calls.
+- Use the CLI for explicit terminal commands, `--json` output, smoke tests, and shell scripting.
+- The CLI MVP is read-only. It does not expose create, update, delete, payment, attachment, or close-job operations.
+
+Local CLI test from a clone:
+
+```bash
+cd mcp-server
+npm install
+export SMARTMOVING_API_KEY="your-key-here"
+export SMARTMOVING_ALLOW_WRITES="false"
+npm run build
+node dist/cli.js ping
+node dist/cli.js leads list --page-size 10 --json
+node dist/cli.js reference branches --json
+```
+
+After a future npm publish, the package is expected to expose a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, environment variables, `--json` examples, packaging notes, and deferred items.
 
 ## Safety modes
 

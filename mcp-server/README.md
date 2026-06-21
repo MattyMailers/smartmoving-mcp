@@ -22,7 +22,9 @@ In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. Se
 
 ## Read-only CLI MVP
 
-This package also builds a small `smartmoving` CLI for terminal agents, scripts, and debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
+This package also builds a small, unofficial `smartmoving` CLI for authorized SmartMoving API users running terminal agents, scripts, smoke tests, and local debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
+
+Use the MCP server when an agent should discover and call SmartMoving tools through MCP. Use the CLI when you want explicit terminal commands and optional machine-readable `--json` output. The CLI is intentionally smaller than the MCP server and is read-only in this MVP.
 
 ```bash
 npm run build
@@ -37,6 +39,16 @@ SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js followups due --opp
 ```
 
 The CLI is read-only in this MVP. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
+
+See [`../docs/CLI.md`](../docs/CLI.md) for local-clone setup, environment variables, future npm/npx usage, safety notes, and deferred CLI work.
+
+Future package usage after maintainers publish a version to npm may look like:
+
+```bash
+SMARTMOVING_API_KEY="your-key-here" npx -y --package smartmoving-mcp-server smartmoving ping
+```
+
+Do not publish from a PR unless the maintainer explicitly decides to release.
 
 ## Environment variables
 
