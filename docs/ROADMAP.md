@@ -2,6 +2,19 @@
 
 This is the practical path from "internal MCP wrapper" to "useful public agent integration".
 
+For the dedicated gog-style CLI roadmap and future implementation loops, see:
+
+- `docs/CLI-EPIC-ROADMAP.md`
+- `docs/plans/01-cli-init-doctor.md`
+- `docs/plans/02-cli-schema-and-registry.md`
+- `docs/plans/03-cli-read-tools.md`
+- `docs/plans/04-cli-write-tools.md`
+- `docs/plans/05-cli-destructive-safety.md`
+- `docs/plans/06-agent-ux.md`
+- `docs/plans/07-docs-site-and-command-index.md`
+- `docs/plans/08-packaging-release-smoke.md`
+- `docs/plans/09-power-features.md`
+
 ## Near-term hardening
 
 1. **Mocked test suite**
