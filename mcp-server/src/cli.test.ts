@@ -1,4 +1,5 @@
-import { mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { access, mkdtemp, readFile, rm, writeFile } from "node:fs/promises";
+import { constants } from "node:fs";
 import { tmpdir } from "node:os";
 import { join } from "node:path";
 import { createServer, type IncomingMessage, type ServerResponse } from "node:http";
@@ -28,8 +29,8 @@ interface ReadCommandCase {
   expectedPath: string;
 }
 
-async function runCli(args: string[], env: Record<string, string | undefined> = {}, stdin?: string): Promise<CliResult> {
-  const child = spawn(process.execPath, [...cliArgs, ...args], {
+async function runProcess(command: string, args: string[], env: Record<string, string | undefined> = {}, stdin?: string): Promise<CliResult> {
+  const child = spawn(command, args, {
     cwd: process.cwd(),
     env: {
       ...process.env,
@@ -37,6 +38,7 @@ async function runCli(args: string[], env: Record<string, string | undefined> = 
       SMARTMOVING_BASE_URL: undefined,
       SMARTMOVING_ALLOW_WRITES: undefined,
       SMARTMOVING_ALLOW_DESTRUCTIVE: undefined,
+      SMARTMOVING_LIVE_TESTS: undefined,
       ...env,
     },
     stdio: ["pipe", "pipe", "pipe"],
@@ -61,6 +63,14 @@ async function runCli(args: string[], env: Record<string, string | undefined> = 
 
   const [code] = (await once(child, "exit")) as [number | null];
   return { code, stdout, stderr };
+}
+
+async function runCli(args: string[], env: Record<string, string | undefined> = {}, stdin?: string): Promise<CliResult> {
+  return runProcess(process.execPath, [...cliArgs, ...args], env, stdin);
+}
+
+async function runNpm(args: string[]): Promise<CliResult> {
+  return runProcess("npm", args);
 }
 
 async function withMockApi<T>(
@@ -848,5 +858,107 @@ describe("SmartMoving CLI", () => {
         expect(requests[0]).toMatchObject({ method: "GET", path: "/v1/api/leads/lead-1" });
       },
     );
+  });
+
+  it("built package exposes both documented binaries", async () => {
+    await access("dist/cli.js", constants.R_OK);
+    await access("dist/index.js", constants.R_OK);
+
+    const packageJson = JSON.parse(await readFile("package.json", "utf8"));
+    expect(packageJson.bin).toEqual({
+      smartmoving: "dist/cli.js",
+      "smartmoving-mcp-server": "dist/index.js",
+    });
+  });
+
+  it("npm pack dry-run includes only the intended package surfaces", async () => {
+    const result = await runNpm(["pack", "--dry-run", "--json"]);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).not.toContain(testApiKey);
+    const [pack] = JSON.parse(result.stdout) as Array<{ files: Array<{ path: string }> }>;
+    const files = pack.files.map((file) => file.path).sort();
+    expect(files).toContain("README.md");
+    expect(files).toContain("NOTICE.md");
+    expect(files).toContain("package.json");
+    expect(files).toContain("dist/cli.js");
+    expect(files).toContain("dist/index.js");
+    expect(files).toContain("dist/cli/smoke.js");
+    expect(files.every((file) => file.startsWith("dist/") || ["README.md", "NOTICE.md", "package.json"].includes(file))).toBe(true);
+  });
+
+  it("smoke read --json calls a mocked read endpoint and redacts API keys", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 200, { ok: true }),
+      async (baseUrl, requests) => {
+        const result = await runCli(["smoke", "read", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(result.stdout).not.toContain(testApiKey);
+        expect(JSON.parse(result.stdout)).toMatchObject({
+          ok: true,
+          mode: "read",
+          live: false,
+          checks: [expect.objectContaining({ name: "ping", ok: true })],
+        });
+        expect(requests).toHaveLength(1);
+        expect(requests[0]).toMatchObject({ method: "GET", path: "/v1/api/ping" });
+      },
+    );
+  });
+
+  it("smoke live requires explicit SMARTMOVING_LIVE_TESTS=true", async () => {
+    const result = await runCli(["smoke", "live", "--read-only", "--json"], { SMARTMOVING_API_KEY: testApiKey });
+
+    expect(result.code).toBe(1);
+    expect(result.stderr).toBe("");
+    expect(result.stdout).not.toContain(testApiKey);
+    expect(JSON.parse(result.stdout)).toEqual({
+      ok: false,
+      mode: "live",
+      error: {
+        code: "LIVE_TESTS_DISABLED",
+        message: "Live smoke tests require SMARTMOVING_LIVE_TESTS=true.",
+        hint: "Run mocked smoke tests by default; only enable live tests against an authorized account.",
+      },
+    });
+  });
+
+  it("smoke write defaults to dry-run output without calling SmartMoving", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const result = await runCli(["smoke", "write", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(result.stdout).not.toContain(testApiKey);
+        expect(JSON.parse(result.stdout)).toMatchObject({
+          ok: true,
+          mode: "write",
+          dryRun: true,
+          request: { method: "POST", path: "/api/premium/leads" },
+        });
+        expect(requests).toHaveLength(0);
+      },
+    );
+  });
+
+  it("package docs mention unofficial status and use-at-own-risk language", async () => {
+    const packageReadme = await readFile("README.md", "utf8");
+    const rootReadme = await readFile("../README.md", "utf8");
+
+    for (const docs of [packageReadme, rootReadme]) {
+      expect(docs).toMatch(/Unofficial project/i);
+      expect(docs).toMatch(/use(d)? at your own risk/i);
+      expect(docs).toMatch(/not affiliated with, endorsed by, sponsored by, or certified by SmartMoving/i);
+    }
   });
 });

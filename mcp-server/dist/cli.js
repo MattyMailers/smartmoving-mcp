@@ -10,6 +10,7 @@ import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig }
 import { registerDocsCommand } from "./cli/docs.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
+import { registerSmokeCommand } from "./cli/smoke.js";
 import { registerSchemaCommand } from "./operations/register-cli.js";
 const truthyValues = new Set(["1", "true", "yes", "on"]);
 function envFlag(name) {
@@ -382,6 +383,7 @@ program
 registerSchemaCommand(program, { jsonOption, printResult });
 registerAgentCommand(program, { jsonOption, printResult, formatJson, formatError });
 registerDocsCommand(program, { jsonOption, printResult });
+registerSmokeCommand(program, { jsonOption });
 const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
 mcp
     .command("config")

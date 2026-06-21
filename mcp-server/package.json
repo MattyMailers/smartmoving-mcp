@@ -3,6 +3,10 @@
   "version": "0.1.0",
   "description": "Unofficial MCP server and safety-gated CLI for authorized SmartMoving External API users",
   "license": "MIT",
+  "homepage": "https://github.com/MattyMailers/smartmoving-mcp#readme",
+  "bugs": {
+    "url": "https://github.com/MattyMailers/smartmoving-mcp/issues"
+  },
   "repository": {
     "type": "git",
     "url": "git+https://github.com/MattyMailers/smartmoving-mcp.git",

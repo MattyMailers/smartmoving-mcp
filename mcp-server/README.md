@@ -52,7 +52,35 @@ Future package usage after maintainers publish a version to npm may look like:
 
 ```bash
 SMARTMOVING_API_KEY="your-key-here" npx -y --package smartmoving-mcp-server smartmoving ping
+SMARTMOVING_API_KEY="your-key-here" npx -y --package smartmoving-mcp-server smartmoving doctor --json
 ```
+
+Global install usage after publish:
+
+```bash
+npm install -g smartmoving-mcp-server
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+```
+
+The package exposes both documented binaries:
+
+```text
+smartmoving
+smartmoving-mcp-server
+```
+
+Smoke commands are intentionally conservative:
+
+```bash
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+SMARTMOVING_LIVE_TESTS=true SMARTMOVING_API_KEY="your-key-here" smartmoving smoke live --read-only --json
+```
+
+Live smoke tests never run in CI and require `SMARTMOVING_LIVE_TESTS=true`. Live write smoke tests are intentionally unsupported until a dedicated sandbox-account workflow exists.
 
 Do not publish from a PR unless the maintainer explicitly decides to release.
 

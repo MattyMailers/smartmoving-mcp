@@ -53,10 +53,26 @@ smartmoving-api/
 
 ## Quick start
 
-The easiest public install path is npm/npx:
+The easiest public MCP server install path after maintainers publish to npm is:
 
 ```bash
 npx smartmoving-mcp-server
+```
+
+The same package exposes a `smartmoving` CLI binary for diagnostics and smoke tests. Global install usage after publish:
+
+```bash
+npm install -g smartmoving-mcp-server
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+```
+
+For one-off npx CLI runs, npm binary resolution is clearest with `--package`:
+
+```bash
+SMARTMOVING_API_KEY="replace-with-your-key" npx -y --package smartmoving-mcp-server smartmoving doctor --json
 ```
 
 For local development from source:
@@ -95,9 +111,11 @@ npm run build
 node dist/cli.js ping
 node dist/cli.js leads list --page-size 10 --json
 node dist/cli.js reference branches --json
+node dist/cli.js smoke read --json
+node dist/cli.js smoke write --dry-run --json
 ```
 
-After a future npm publish, the package is expected to expose a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, [`docs/commands/README.md`](./docs/commands/README.md) for generated registry-backed command docs, and [`docs/SAFETY-PROFILES.md`](./docs/SAFETY-PROFILES.md) for safe read/write/destructive modes.
+After a future npm publish, the package exposes a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, [`docs/LIVE-TESTING.md`](./docs/LIVE-TESTING.md) for opt-in smoke testing, [`docs/commands/README.md`](./docs/commands/README.md) for generated registry-backed command docs, and [`docs/SAFETY-PROFILES.md`](./docs/SAFETY-PROFILES.md) for safe read/write/destructive modes.
 
 ## Safety modes
 

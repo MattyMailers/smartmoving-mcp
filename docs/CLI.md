@@ -105,6 +105,8 @@ node dist/cli.js doctor --json
 node dist/cli.js mcp config --print-json
 node dist/cli.js schema --json
 node dist/cli.js docs generate --json
+node dist/cli.js smoke read --json
+node dist/cli.js smoke write --dry-run --json
 node dist/cli.js schema --group leads --json
 node dist/cli.js schema --safety read --json
 node dist/cli.js ping
@@ -187,6 +189,9 @@ smartmoving schema --json
 smartmoving schema --group leads --json
 smartmoving schema --safety read --json
 smartmoving docs generate --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+smartmoving smoke live --read-only --json
 smartmoving reference all --json
 smartmoving reference branches --json
 smartmoving reference move-sizes --json
@@ -270,9 +275,18 @@ Possible future usage after publication:
 
 ```bash
 SMARTMOVING_API_KEY="replace-with-your-key" npx -y --package smartmoving-mcp-server smartmoving ping
+SMARTMOVING_API_KEY="replace-with-your-key" npx -y --package smartmoving-mcp-server smartmoving doctor --json
 ```
 
-Depending on npm binary resolution, users may also install globally or run the package-provided `smartmoving` binary directly. The first PR is only meant to prove local clone, build, and packed-package behavior.
+Depending on npm binary resolution, use `--package smartmoving-mcp-server smartmoving ...` for one-off CLI commands. Global installs expose the package-provided `smartmoving` binary directly:
+
+```bash
+npm install -g smartmoving-mcp-server
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+```
+
+The first PR is only meant to prove local clone, build, and packed-package behavior.
 
 ## Deferred intentionally
 
