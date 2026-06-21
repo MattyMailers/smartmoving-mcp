@@ -166,6 +166,8 @@ The Premium tier includes everything in Basic, plus full CRUD operations. Premiu
 
 ## Security Best Practices
 
+For MCP/CLI usage, keep the key in `SMARTMOVING_API_KEY` and start in read-only mode. See [`SAFETY-PROFILES.md`](./SAFETY-PROFILES.md) for read-only, dry-run, guarded-write, and destructive-operation profiles. The CLI config created by `smartmoving init` stores only the API-key environment variable name, not the raw key value.
+
 1. **Use header authentication in production.** Never include API keys in URLs for production systems.
 
 2. **Store keys securely.** Use environment variables, secrets managers (e.g., AWS Secrets Manager, Azure Key Vault, HashiCorp Vault), or encrypted configuration files. Never hard-code keys in source code.

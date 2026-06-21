@@ -739,6 +739,36 @@ describe("SmartMoving CLI", () => {
     expect(schema.operations.every((operation: { group: string; safety: string }) => operation.group === "leads" && operation.safety === "read")).toBe(true);
   });
 
+  it("docs generate writes deterministic registry-backed command docs without secrets", async () => {
+    const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-docs-test-"));
+
+    try {
+      const first = await runCli(["docs", "generate", "--output-dir", dir, "--json"], { SMARTMOVING_API_KEY: testApiKey });
+      const firstIndex = await readFile(join(dir, "README.md"), "utf8");
+      const firstLeadDoc = await readFile(join(dir, "leads", "list.md"), "utf8");
+
+      const second = await runCli(["docs", "generate", "--output-dir", dir, "--json"], { SMARTMOVING_API_KEY: testApiKey });
+      const secondIndex = await readFile(join(dir, "README.md"), "utf8");
+      const secondLeadDoc = await readFile(join(dir, "leads", "list.md"), "utf8");
+
+      expect(first.code).toBe(0);
+      expect(second.code).toBe(0);
+      expect(first.stderr).toBe("");
+      expect(JSON.parse(first.stdout)).toMatchObject({ ok: true, outputDir: dir, filesWritten: expect.any(Number) });
+      expect(firstIndex).toBe(secondIndex);
+      expect(firstLeadDoc).toBe(secondLeadDoc);
+      expect(firstIndex).toContain("# SmartMoving CLI Command Index");
+      expect(firstIndex).toContain("[READ] `smartmoving leads list`");
+      expect(firstLeadDoc).toContain("Safety level: `READ`");
+      expect(firstLeadDoc).toContain("## Examples");
+      expect(firstLeadDoc).toContain("smartmoving leads list --json");
+      expect(firstLeadDoc).toContain("Related MCP tool: `list_leads`");
+      expect(firstIndex + firstLeadDoc).not.toContain(testApiKey);
+    } finally {
+      await rm(dir, { recursive: true, force: true });
+    }
+  });
+
   it("agent safety --json returns the stable agent safety contract", async () => {
     const result = await runCli(["agent", "safety", "--json"]);
 

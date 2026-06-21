@@ -8,6 +8,7 @@ import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
 import { registerAgentCommand } from "./cli/agent.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
+import { registerDocsCommand } from "./cli/docs.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
 import { registerSchemaCommand } from "./operations/register-cli.js";
@@ -503,6 +504,7 @@ program
 
 registerSchemaCommand(program, { jsonOption, printResult });
 registerAgentCommand(program, { jsonOption, printResult, formatJson, formatError });
+registerDocsCommand(program, { jsonOption, printResult });
 
 const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
 

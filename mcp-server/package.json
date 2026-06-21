@@ -1,7 +1,7 @@
 {
   "name": "smartmoving-mcp-server",
   "version": "0.1.0",
-  "description": "Unofficial MCP server and read-only CLI for authorized SmartMoving External API users",
+  "description": "Unofficial MCP server and safety-gated CLI for authorized SmartMoving External API users",
   "license": "MIT",
   "repository": {
     "type": "git",

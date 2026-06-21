@@ -33,6 +33,8 @@ smartmoving-api/
 │   ├── AUTHENTICATION.md
 │   ├── BEST-PRACTICES.md
 │   ├── CLI.md
+│   ├── commands/
+│   ├── SAFETY-PROFILES.md
 │   ├── ENDPOINTS.md
 │   ├── ENUMS.md
 │   ├── OPPORTUNITY-V1-V2-LIMITATIONS.md
@@ -95,7 +97,7 @@ node dist/cli.js leads list --page-size 10 --json
 node dist/cli.js reference branches --json
 ```
 
-After a future npm publish, the package is expected to expose a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, environment variables, `--json` examples, packaging notes, and deferred items.
+After a future npm publish, the package is expected to expose a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, [`docs/commands/README.md`](./docs/commands/README.md) for generated registry-backed command docs, and [`docs/SAFETY-PROFILES.md`](./docs/SAFETY-PROFILES.md) for safe read/write/destructive modes.
 
 ## Safety modes
 

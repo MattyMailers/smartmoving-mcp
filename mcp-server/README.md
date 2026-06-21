@@ -38,9 +38,15 @@ SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js jobs get JOB_UUID -
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js followups due --opportunity-id OPPORTUNITY_UUID --json
 ```
 
-The CLI is read-only in this MVP. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
+The CLI includes read commands plus guarded write/destructive commands. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
 
-See [`../docs/CLI.md`](../docs/CLI.md) for local-clone setup, environment variables, future npm/npx usage, safety notes, and deferred CLI work.
+See [`../docs/CLI.md`](../docs/CLI.md) for local-clone setup, environment variables, future npm/npx usage, safety notes, and deferred CLI work. Generate registry-backed command docs with:
+
+```bash
+node dist/cli.js docs generate --json
+```
+
+The generated index is written to [`../docs/commands/README.md`](../docs/commands/README.md).
 
 Future package usage after maintainers publish a version to npm may look like:
 

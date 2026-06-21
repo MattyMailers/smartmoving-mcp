@@ -104,6 +104,7 @@ node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
 node dist/cli.js doctor --json
 node dist/cli.js mcp config --print-json
 node dist/cli.js schema --json
+node dist/cli.js docs generate --json
 node dist/cli.js schema --group leads --json
 node dist/cli.js schema --safety read --json
 node dist/cli.js ping
@@ -161,6 +162,18 @@ Destructive commands disabled by default return this stable JSON error without m
 
 Successful write commands with `--json` use the same `{ "ok": true, "data": ... }` wrapper as reads. Dry-runs return `{ "ok": true, "dryRun": true, "request": { "method": "POST", "path": "...", "body": {} } }` and do not call SmartMoving.
 
+## Generated command docs
+
+The command reference under [`docs/commands/`](./commands/README.md) is generated from the same operation registry as `schema --json`:
+
+```bash
+node dist/cli.js docs generate --json
+```
+
+By default this writes `../docs/commands` when run from `mcp-server/`. For tests or preview output, pass `--output-dir <dir>`. The generated pages include command text, description, safety level, arguments, options, examples, JSON output notes, related MCP tool, and common failure modes.
+
+Regenerate command docs whenever `mcp-server/src/operations/registry.ts` changes.
+
 ## Commands in the MVP
 
 ```bash
@@ -173,6 +186,7 @@ smartmoving mcp config --print-json
 smartmoving schema --json
 smartmoving schema --group leads --json
 smartmoving schema --safety read --json
+smartmoving docs generate --json
 smartmoving reference all --json
 smartmoving reference branches --json
 smartmoving reference move-sizes --json
