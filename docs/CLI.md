@@ -9,7 +9,7 @@ The `smartmoving` CLI is a guarded MVP built from the same TypeScript package as
 - Use the **MCP server** when an MCP-compatible agent should discover SmartMoving tools and call them through tool-use permissions.
 - Use the **CLI** when a terminal agent, script, or human wants explicit commands such as `smartmoving ping` or JSON output for piping into another program.
 - Both entrypoints use the same SmartMoving API client and environment variables.
-- The CLI exposes read operations plus a small set of guarded, non-destructive write commands. Destructive operations remain intentionally unavailable from the CLI.
+- The CLI exposes read operations, guarded write commands, and a very small set of destructive commands with extra safety gates.
 
 ## Safety posture
 
@@ -20,10 +20,11 @@ For this MVP:
 - `SMARTMOVING_API_KEY` is required.
 - Do not pass API keys as command arguments.
 - Output may contain CRM data returned by your authorized account; handle it carefully.
-- CLI writes are disabled by default. Non-destructive write commands require `SMARTMOVING_ALLOW_WRITES=true` or the top-level `--allow-writes` flag.
+- CLI writes are disabled by default. Write commands require `SMARTMOVING_ALLOW_WRITES=true` or the top-level `--allow-writes` flag.
+- CLI destructive commands require all three: `SMARTMOVING_ALLOW_WRITES=true`, `SMARTMOVING_ALLOW_DESTRUCTIVE=true`, and `--yes`. Dry-run does not require those gates and never calls SmartMoving.
 - Prefer `--dry-run` first. Dry-run validates the input JSON and prints the request method/path/body without calling SmartMoving.
 - JSON mode never prompts interactively. Real writes require `--yes`; without `--yes`, enabled write commands still return dry-run output.
-- No CLI destructive commands are exposed. MCP destructive tools still require both `SMARTMOVING_ALLOW_WRITES=true` and `SMARTMOVING_ALLOW_DESTRUCTIVE=true`.
+- MCP destructive tools also require both `SMARTMOVING_ALLOW_WRITES=true` and `SMARTMOVING_ALLOW_DESTRUCTIVE=true`.
 
 ## Install from a local clone
 
@@ -47,6 +48,8 @@ npm run build
 ```bash
 export SMARTMOVING_API_KEY="replace-with-your-key"
 export SMARTMOVING_ALLOW_WRITES="false"
+# Only for intentional delete-style operations:
+# export SMARTMOVING_ALLOW_DESTRUCTIVE="false"
 # Optional override, normally not needed:
 # export SMARTMOVING_BASE_URL="https://api-public.smartmoving.com/v1"
 ```
@@ -57,7 +60,7 @@ Variables used by the package:
 - `SMARTMOVING_BASE_URL`: optional. Defaults to `https://api-public.smartmoving.com/v1`.
 - `SMARTMOVING_CONFIG_PATH`: optional CLI config path override, useful for tests and isolated agent profiles. Defaults to `~/.config/smartmoving/config.json`.
 - `SMARTMOVING_ALLOW_WRITES`: optional. Enables guarded CLI write commands and MCP write tools. Defaults to read-only behavior.
-- `SMARTMOVING_ALLOW_DESTRUCTIVE`: optional. Used by MCP destructive tools only when writes are also enabled.
+- `SMARTMOVING_ALLOW_DESTRUCTIVE`: optional. Enables CLI/MCP destructive commands only when writes are also enabled and the CLI command includes `--yes`.
 
 ## First-run CLI config
 
@@ -143,6 +146,19 @@ Write commands disabled by default return this stable JSON error without making 
 }
 ```
 
+Destructive commands disabled by default return this stable JSON error without making an HTTP request:
+
+```json
+{
+  "ok": false,
+  "error": {
+    "code": "DESTRUCTIVE_DISABLED",
+    "message": "Destructive operations are disabled by default.",
+    "hint": "Set SMARTMOVING_ALLOW_WRITES=true and SMARTMOVING_ALLOW_DESTRUCTIVE=true, then pass --yes."
+  }
+}
+```
+
 Successful write commands with `--json` use the same `{ "ok": true, "data": ... }` wrapper as reads. Dry-runs return `{ "ok": true, "dryRun": true, "request": { "method": "POST", "path": "...", "body": {} } }` and do not call SmartMoving.
 
 ## Commands in the MVP
@@ -182,28 +198,38 @@ smartmoving leads get <leadId> --json
 smartmoving leads create --input lead.json --dry-run --json
 smartmoving leads update <leadId> --input lead.json --dry-run --json
 smartmoving leads patch <leadId> --input patch.json --dry-run --json
+smartmoving leads convert <leadId> --input convert.json --dry-run --json
 smartmoving leads by-salesperson <userId> --json
 smartmoving leads statuses --json
 smartmoving opportunities get <opportunityId> --json
 smartmoving opportunities by-quote <quoteNumber> --json
 smartmoving opportunities create --input opportunity.json --dry-run --json
 smartmoving opportunities update <opportunityId> --input opportunity.json --dry-run --json
+smartmoving opportunities attachments add <opportunityId> --file path.pdf --dry-run --json
+smartmoving opportunities rooms create <opportunityId> --input rooms.json --dry-run --json
 smartmoving opportunities audit <opportunityId> --json
 smartmoving opportunities documents <opportunityId> --json
 smartmoving opportunities payments <opportunityId> --json
 smartmoving jobs by-opportunity <opportunityId> --json
 smartmoving jobs get <jobId> --opportunity-id <opportunityId> --json
+smartmoving jobs delete <jobId> --opportunity-id <opportunityId> --dry-run --json
+smartmoving jobs confirm <jobId> --opportunity-id <opportunityId> --dry-run --json
 smartmoving jobs notes <jobId> --opportunity-id <opportunityId> --json
 smartmoving jobs notes update <jobId> --opportunity-id <opportunityId> --input notes.json --dry-run --json
 smartmoving jobs notes append <jobId> --opportunity-id <opportunityId> --text "Synthetic note" --dry-run --json
+smartmoving jobs stops update <jobId> --opportunity-id <opportunityId> --input stops.json --dry-run --json
+smartmoving jobs materials add <jobId> --opportunity-id <opportunityId> --input materials.json --dry-run --json
 smartmoving inventory opportunity <opportunityId> --json
 smartmoving inventory master --json
 smartmoving inventory room-types --json
+smartmoving inventory remove-item <itemId> --opportunity-id <opportunityId> --room-id <roomId> --dry-run --json
+smartmoving inventory submit-review <opportunityId> --dry-run --json
 smartmoving followups list --opportunity-id <opportunityId> --json
 smartmoving followups get <followupId> --opportunity-id <opportunityId> --json
 smartmoving followups due --opportunity-id <opportunityId> --json
 smartmoving followups create --opportunity-id <opportunityId> --input followup.json --dry-run --json
 smartmoving followups update <followupId> --opportunity-id <opportunityId> --input followup.json --dry-run --json
+smartmoving followups delete <followupId> --opportunity-id <opportunityId> --dry-run --json
 smartmoving communication note --input note.json --dry-run --json
 smartmoving communication call --input call.json --dry-run --json
 ```
@@ -215,6 +241,7 @@ Notes:
 - `jobs get` requires the parent opportunity ID because the SmartMoving v1 Premium job detail endpoint is nested under an opportunity.
 - `followups list`, `followups get`, and `followups due` are scoped to one opportunity because the current SmartMoving v1 API surface does not expose an account-wide due-followups endpoint.
 - Use `--json` for machine-readable output. Without `--json`, the CLI prints a simple human-readable wrapper around the API response.
+- To execute a destructive command for real, set both `SMARTMOVING_ALLOW_WRITES=true` and `SMARTMOVING_ALLOW_DESTRUCTIVE=true`, then pass `--yes`. Prefer `--dry-run` first and never run live destructive examples from tests or CI.
 
 ## Future npm/npx usage
 
@@ -235,7 +262,6 @@ Depending on npm binary resolution, users may also install globally or run the p
 
 ## Deferred intentionally
 
-- Destructive CLI commands.
 - Live API tests in CI.
 - npm publishing.
 - Splitting a dedicated `smartmoving-cli` package.

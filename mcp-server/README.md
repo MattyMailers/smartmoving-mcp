@@ -20,11 +20,11 @@ npm start
 
 In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. See [`../docs/AGENT-INSTALL.md`](../docs/AGENT-INSTALL.md).
 
-## Read-only CLI MVP
+## CLI MVP
 
 This package also builds a small, unofficial `smartmoving` CLI for authorized SmartMoving API users running terminal agents, scripts, smoke tests, and local debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
 
-Use the MCP server when an agent should discover and call SmartMoving tools through MCP. Use the CLI when you want explicit terminal commands and optional machine-readable `--json` output. The CLI is intentionally smaller than the MCP server and is read-only in this MVP.
+Use the MCP server when an agent should discover and call SmartMoving tools through MCP. Use the CLI when you want explicit terminal commands and optional machine-readable `--json` output. CLI writes are disabled by default, destructive CLI commands require both write/destructive environment gates plus `--yes`, and `--dry-run` should be used before any live change.
 
 ```bash
 npm run build

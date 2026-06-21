@@ -72,15 +72,15 @@ npm start
 
 The server uses stdio, so it is normally launched by an MCP client rather than run manually in a terminal.
 
-## SmartMoving CLI read-only MVP
+## SmartMoving CLI MVP
 
-This repo also includes an **unofficial, read-only `smartmoving` CLI MVP** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and environment variables as the MCP server, but it is intentionally much smaller than the full MCP tool catalog.
+This repo also includes an **unofficial, safety-gated `smartmoving` CLI MVP** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and environment variables as the MCP server, but it is intentionally smaller than the full MCP tool catalog.
 
 MCP vs CLI positioning:
 
 - Use the MCP server for agent-native tool discovery and controlled MCP tool calls.
 - Use the CLI for explicit terminal commands, `--json` output, smoke tests, and shell scripting.
-- The CLI MVP is read-only. It does not expose create, update, delete, payment, attachment, or close-job operations.
+- The CLI includes guarded read, write, and destructive commands. Writes are blocked unless explicitly enabled, destructive commands require the additional destructive gate plus `--yes`, and dry-run is the recommended first step.
 
 Local CLI test from a clone:
 

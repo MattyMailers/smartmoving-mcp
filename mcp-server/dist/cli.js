@@ -2,6 +2,7 @@
 import { createInterface } from "node:readline/promises";
 import { stdin as input, stderr as output } from "node:process";
 import { readFile } from "node:fs/promises";
+import { basename } from "node:path";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
@@ -16,6 +17,9 @@ function envFlag(name) {
 function writesEnabled(options) {
     return options?.allowWrites === true || program.opts().allowWrites === true || envFlag("SMARTMOVING_ALLOW_WRITES");
 }
+function destructiveEnabled(options) {
+    return options?.allowDestructive === true || program.opts().allowDestructive === true || envFlag("SMARTMOVING_ALLOW_DESTRUCTIVE");
+}
 function requireClient() {
     const apiKey = process.env.SMARTMOVING_API_KEY;
     if (!apiKey) {
@@ -25,6 +29,7 @@ function requireClient() {
         apiKey,
         baseUrl: process.env.SMARTMOVING_BASE_URL,
         allowWrites: writesEnabled(program.opts()),
+        allowDestructive: destructiveEnabled(program.opts()),
     });
 }
 function positiveInteger(value, label) {
@@ -81,6 +86,16 @@ function writesDisabledResponse() {
         },
     };
 }
+function destructiveDisabledResponse() {
+    return {
+        ok: false,
+        error: {
+            code: "DESTRUCTIVE_DISABLED",
+            message: "Destructive operations are disabled by default.",
+            hint: "Set SMARTMOVING_ALLOW_WRITES=true and SMARTMOVING_ALLOW_DESTRUCTIVE=true, then pass --yes.",
+        },
+    };
+}
 async function readStdinText() {
     let text = "";
     input.setEncoding("utf8");
@@ -131,6 +146,21 @@ async function confirmWrite(options, request) {
 }
 async function runWrite(label, options, prepare) {
     try {
+        const request = await prepare();
+        if (options.dryRun) {
+            printResult(label, { ok: true, dryRun: true, request }, options);
+            return;
+        }
+        if (request.safety === "destructive" && (!writesEnabled(options) || !destructiveEnabled(options) || !options.yes)) {
+            if (wantsJson(options)) {
+                console.log(formatJson(destructiveDisabledResponse()));
+            }
+            else {
+                console.error("Error: Destructive operations are disabled by default. Set SMARTMOVING_ALLOW_WRITES=true and SMARTMOVING_ALLOW_DESTRUCTIVE=true, then pass --yes.");
+            }
+            process.exitCode = 1;
+            return;
+        }
         if (!writesEnabled(options)) {
             if (wantsJson(options)) {
                 console.log(formatJson(writesDisabledResponse()));
@@ -141,8 +171,7 @@ async function runWrite(label, options, prepare) {
             process.exitCode = 1;
             return;
         }
-        const request = await prepare();
-        if (options.dryRun || !options.yes) {
+        if (!options.yes) {
             printResult(label, { ok: true, dryRun: true, request }, options);
             return;
         }
@@ -152,7 +181,9 @@ async function runWrite(label, options, prepare) {
             ? await client.post(request.path, request.body)
             : request.method === "PUT"
                 ? await client.put(request.path, request.body)
-                : await client.patch(request.path, request.body);
+                : request.method === "PATCH"
+                    ? await client.patch(request.path, request.body)
+                    : await client.delete(request.path);
         printReadResult(label, result, options);
     }
     catch (error) {
@@ -173,6 +204,18 @@ function addWriteOptions(command) {
         .option("--dry-run", "validate and print the request without calling SmartMoving")
         .option("--yes", "skip interactive confirmation")
         .option("--idempotency-key <key>", "caller-supplied idempotency key for external tracking");
+}
+function addActionOptions(command) {
+    return command
+        .addOption(jsonOption())
+        .addOption(new Option("--allow-writes", "allow write operations for this command"))
+        .option("--dry-run", "validate and print the request without calling SmartMoving")
+        .option("--yes", "skip interactive confirmation")
+        .option("--idempotency-key <key>", "caller-supplied idempotency key for external tracking");
+}
+function addDestructiveOptions(command) {
+    return addActionOptions(command)
+        .addOption(new Option("--allow-destructive", "allow destructive operations for this command"));
 }
 async function inputBody(options) {
     return requireObject(await readJsonInput(options), "--input");
@@ -295,6 +338,7 @@ program
     .version("0.1.0")
     .addOption(jsonOption())
     .addOption(new Option("--allow-writes", "allow guarded write commands; alternatively set SMARTMOVING_ALLOW_WRITES=true"))
+    .addOption(new Option("--allow-destructive", "allow destructive commands; alternatively set SMARTMOVING_ALLOW_DESTRUCTIVE=true"))
     .addOption(new Option("--plain", "prefer plain text output for commands that support it"))
     .addOption(new Option("--quiet", "suppress non-essential stderr messages"))
     .addOption(new Option("--verbose", "print extra diagnostic detail where supported"))
@@ -487,6 +531,16 @@ addWriteOptions(leads
     path: `/api/premium/leads/${leadId}`,
     body: await inputBody(options),
 })));
+addWriteOptions(leads
+    .command("convert")
+    .description("Convert a lead to an opportunity. High-risk write; dry-run first.")
+    .argument("<leadId>", "lead UUID"))
+    .action((leadId, options) => runWrite("Lead convert", options, async () => ({
+    method: "PUT",
+    path: `/api/premium/lead/${leadId}/convert`,
+    body: await inputBody(options),
+    safety: "write",
+})));
 addReadOptions(leads
     .command("by-salesperson")
     .description("List leads assigned to a salesperson.")
@@ -537,6 +591,42 @@ addWriteOptions(opportunities
     path: `/api/premium/opportunities/${opportunityId}`,
     body: await inputBody(options),
 })));
+const opportunityAttachments = opportunities.command("attachments").description("Manage opportunity attachments.");
+addActionOptions(opportunityAttachments
+    .command("add")
+    .description("Upload an attachment to an opportunity. High-risk write; dry-run first.")
+    .argument("<opportunityId>", "opportunity UUID")
+    .requiredOption("--file <path>", "file to upload")
+    .option("--file-category <category>", "SmartMoving file category number", "0")
+    .option("--notes <notes>", "optional attachment notes"))
+    .action((opportunityId, options) => runWrite("Attachment add", options, async () => {
+    if (!options.file) {
+        throw new Error("--file <path> is required.");
+    }
+    const fileBuffer = await readFile(options.file);
+    return {
+        method: "POST",
+        path: `/api/premium/opportunities/${opportunityId}/attachments`,
+        body: {
+            fileName: basename(options.file),
+            fileCategory: Number.parseInt(options.fileCategory ?? "0", 10),
+            fileBase64: fileBuffer.toString("base64"),
+            notes: options.notes,
+        },
+        safety: "write",
+    };
+}));
+const opportunityRooms = opportunities.command("rooms").description("Manage opportunity inventory rooms.");
+addWriteOptions(opportunityRooms
+    .command("create")
+    .description("Create inventory rooms for an opportunity. High-risk write; dry-run first.")
+    .argument("<opportunityId>", "opportunity UUID"))
+    .action((opportunityId, options) => runWrite("Rooms create", options, async () => ({
+    method: "POST",
+    path: `/api/premium/opportunities/${opportunityId}/rooms`,
+    body: await readJsonInput(options),
+    safety: "write",
+})));
 for (const [commandName, label, pathFor] of [
     ["audit", "Opportunity audit", (opportunityId) => `/api/opportunities/${opportunityId}/audit-activity`],
     ["documents", "Opportunity documents", (opportunityId) => `/api/premium/opportunities/${opportunityId}/documents`],
@@ -573,6 +663,50 @@ addReadOptions(jobs
     IncludeDispatchInfo: options.includeDispatchInfo,
     IncludeCharges: options.includeCharges,
     IncludeNotes: options.includeNotes,
+})));
+addDestructiveOptions(jobs
+    .command("delete")
+    .description("Delete a job from an opportunity. Destructive; requires writes, destructive gate, and --yes.")
+    .argument("<jobId>", "job UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+    .action((jobId, options) => runWrite("Job delete", options, async () => ({
+    method: "DELETE",
+    path: `/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}`,
+    safety: "destructive",
+})));
+addActionOptions(jobs
+    .command("confirm")
+    .description("Confirm a job on an opportunity. High-risk write; dry-run first.")
+    .argument("<jobId>", "job UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+    .action((jobId, options) => runWrite("Job confirm", options, async () => ({
+    method: "POST",
+    path: `/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}/confirm`,
+    safety: "write",
+})));
+const jobStops = jobs.command("stops").description("Manage job stops.");
+addWriteOptions(jobStops
+    .command("update")
+    .description("Replace all stops on a job. High-risk write; dry-run first.")
+    .argument("<jobId>", "job UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+    .action((jobId, options) => runWrite("Job stops update", options, async () => ({
+    method: "PUT",
+    path: `/api/premium/opportunities/${options.opportunityId}/jobs/${jobId}/stops`,
+    body: await inputBody(options),
+    safety: "write",
+})));
+const jobMaterials = jobs.command("materials").description("Manage job materials.");
+addWriteOptions(jobMaterials
+    .command("add")
+    .description("Add estimated materials to a job. High-risk write; dry-run first.")
+    .argument("<jobId>", "job UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "parent opportunity UUID required by the SmartMoving API"))
+    .action((jobId, options) => runWrite("Job materials add", options, async () => ({
+    method: "POST",
+    path: `/api/premium/opportunities/${options.opportunityId}/Estimated/jobs/${jobId}/materials`,
+    body: await inputBody(options),
+    safety: "write",
 })));
 const jobNotes = addReadOptions(jobs
     .command("notes")
@@ -620,6 +754,26 @@ addReadOptions(inventory
     .command("room-types")
     .description("Get available inventory room types."))
     .action((options) => runRead("Room types", options, (client) => client.get("/api/premium/room-types")));
+addDestructiveOptions(inventory
+    .command("remove-item")
+    .description("Remove an inventory item from a room. Destructive; requires writes, destructive gate, and --yes.")
+    .argument("<itemId>", "inventory item UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID")
+    .requiredOption("--room-id <roomId>", "room UUID containing the item"))
+    .action((itemId, options) => runWrite("Inventory item remove", options, async () => ({
+    method: "DELETE",
+    path: `/api/premium/opportunities/${options.opportunityId}/inventory/rooms/${options.roomId}/items/${itemId}`,
+    safety: "destructive",
+})));
+addActionOptions(inventory
+    .command("submit-review")
+    .description("Submit opportunity inventory for review. High-risk write; dry-run first.")
+    .argument("<opportunityId>", "opportunity UUID"))
+    .action((opportunityId, options) => runWrite("Inventory submit review", options, async () => ({
+    method: "POST",
+    path: `/api/premium/opportunities/${opportunityId}/inventory/submit`,
+    safety: "write",
+})));
 const followups = program.command("followups").description("Read follow-up records.");
 addReadOptions(followups
     .command("list")
@@ -664,6 +818,16 @@ addWriteOptions(followups
     method: "PUT",
     path: `/api/premium/opportunities/${options.opportunityId}/followups/${followupId}`,
     body: await inputBody(options),
+})));
+addDestructiveOptions(followups
+    .command("delete")
+    .description("Delete a follow-up from an opportunity. Destructive; requires writes, destructive gate, and --yes.")
+    .argument("<followupId>", "follow-up UUID")
+    .requiredOption("--opportunity-id <opportunityId>", "opportunity UUID"))
+    .action((followupId, options) => runWrite("Follow-up delete", options, async () => ({
+    method: "DELETE",
+    path: `/api/premium/opportunities/${options.opportunityId}/followups/${followupId}`,
+    safety: "destructive",
 })));
 const communication = program.command("communication").description("Log guarded communication writes.");
 addWriteOptions(communication

@@ -286,7 +286,7 @@ const operationMetadata = [
     "group": "leads",
     "safety": "write",
     "cli": {
-      "command": "leads convert-lead-to-opportunity",
+      "command": "leads convert",
       "description": "Convert a lead into an opportunity. Premium tier endpoint. SmartMoving requires a complete conversion payload, not just the lead ID: customerId, referralSourceId, tariffId, moveDate, moveSizeId, salesPersonId, and serviceTypeId are required. Use search_customers/create_customer, get_referral_sources, get_tariffs, get_move_sizes, get_users, and get_service_types first. Follow-up reminders can only be created after this conversion because follow-ups are opportunity-only.",
       "examples": [
         "smartmoving leads convert-lead-to-opportunity --json"
@@ -466,7 +466,7 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "write",
     "cli": {
-      "command": "opportunities add-attachment",
+      "command": "opportunities attachments add",
       "description": "Upload a file attachment to an opportunity. Premium tier endpoint. The file must be provided as a base64-encoded string. Use fileCategory to classify the document type.",
       "examples": [
         "smartmoving opportunities add-attachment --json"
@@ -485,7 +485,7 @@ const operationMetadata = [
     "group": "opportunities",
     "safety": "write",
     "cli": {
-      "command": "opportunities create-rooms",
+      "command": "opportunities rooms create",
       "description": "Create rooms for an opportunity's inventory. Premium tier endpoint. Rooms are used to organize inventory items (e.g. 'Living Room', 'Master Bedroom'). Use get_room_types to find valid room type IDs.",
       "examples": [
         "smartmoving opportunities create-rooms --json"
@@ -576,7 +576,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "destructive",
     "cli": {
-      "command": "jobs delete-job",
+      "command": "jobs delete",
       "description": "Delete a job from an opportunity. Premium tier endpoint. This permanently removes the job and its associated stops, materials, and crew assignments. Use with caution.",
       "examples": [
         "smartmoving jobs delete-job --json"
@@ -595,7 +595,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "write",
     "cli": {
-      "command": "jobs confirm-job",
+      "command": "jobs confirm",
       "description": "Confirm a job on an opportunity. Premium tier endpoint. Marks the job as confirmed, indicating the customer has agreed to the scheduled date and services.",
       "examples": [
         "smartmoving jobs confirm-job --json"
@@ -674,7 +674,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "write",
     "cli": {
-      "command": "jobs update-job-stops",
+      "command": "jobs stops update",
       "description": "Replace all stops on a job. Premium tier endpoint. This is a PUT operation that replaces the entire list of stops. Each stop has a type (PickUp=0 or DropOff=1) and an address. Use sortOrder to control the route sequence.",
       "examples": [
         "smartmoving jobs update-job-stops --json"
@@ -693,7 +693,7 @@ const operationMetadata = [
     "group": "jobs",
     "safety": "write",
     "cli": {
-      "command": "jobs add-job-materials",
+      "command": "jobs materials add",
       "description": "Add estimated materials to a job. Premium tier endpoint. Materials are items like boxes, tape, wrapping paper, etc. that will be used during the job. Use get_tariff_materials to find valid material IDs for the opportunity's tariff.",
       "examples": [
         "smartmoving jobs add-job-materials --json"
@@ -769,7 +769,7 @@ const operationMetadata = [
     "group": "inventory",
     "safety": "destructive",
     "cli": {
-      "command": "inventory remove-inventory-item",
+      "command": "inventory remove-item",
       "description": "Remove an inventory item from a room. Premium tier endpoint. Permanently deletes the item from the opportunity's inventory.",
       "examples": [
         "smartmoving inventory remove-inventory-item --json"
@@ -788,7 +788,7 @@ const operationMetadata = [
     "group": "inventory",
     "safety": "write",
     "cli": {
-      "command": "inventory submit-inventory-review",
+      "command": "inventory submit-review",
       "description": "Submit the inventory for review / finalization. Premium tier endpoint. Call this after all inventory items have been added and the inventory is complete. This typically triggers weight/volume calculations and may affect pricing.",
       "examples": [
         "smartmoving inventory submit-inventory-review --json"
@@ -926,7 +926,7 @@ const operationMetadata = [
     "group": "followups",
     "safety": "destructive",
     "cli": {
-      "command": "followups delete-followup",
+      "command": "followups delete",
       "description": "Delete a follow-up from an opportunity. Premium tier endpoint. Permanently removes the follow-up task. Use complete_followup instead if the task was actually performed.",
       "examples": [
         "smartmoving followups delete-followup --json"

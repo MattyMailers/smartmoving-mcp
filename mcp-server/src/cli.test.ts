@@ -36,6 +36,7 @@ async function runCli(args: string[], env: Record<string, string | undefined> = 
       SMARTMOVING_API_KEY: undefined,
       SMARTMOVING_BASE_URL: undefined,
       SMARTMOVING_ALLOW_WRITES: undefined,
+      SMARTMOVING_ALLOW_DESTRUCTIVE: undefined,
       ...env,
     },
     stdio: ["pipe", "pipe", "pipe"],
@@ -369,6 +370,113 @@ describe("SmartMoving CLI", () => {
     );
   });
 
+  it("destructive commands refuse without both env gates and --yes before making an HTTP request", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        for (const env of [
+          { SMARTMOVING_API_KEY: testApiKey, SMARTMOVING_BASE_URL: baseUrl },
+          { SMARTMOVING_API_KEY: testApiKey, SMARTMOVING_BASE_URL: baseUrl, SMARTMOVING_ALLOW_WRITES: "true" },
+          { SMARTMOVING_API_KEY: testApiKey, SMARTMOVING_BASE_URL: baseUrl, SMARTMOVING_ALLOW_DESTRUCTIVE: "true" },
+          { SMARTMOVING_API_KEY: testApiKey, SMARTMOVING_BASE_URL: baseUrl, SMARTMOVING_ALLOW_WRITES: "true", SMARTMOVING_ALLOW_DESTRUCTIVE: "true" },
+        ]) {
+          const result = await runCli(["followups", "delete", "followup-1", "--opportunity-id", "opp-1", "--json"], env);
+
+          expect(result.code).toBe(1);
+          expect(result.stderr).toBe("");
+          expect(JSON.parse(result.stdout)).toEqual({
+            ok: false,
+            error: {
+              code: "DESTRUCTIVE_DISABLED",
+              message: "Destructive operations are disabled by default.",
+              hint: "Set SMARTMOVING_ALLOW_WRITES=true and SMARTMOVING_ALLOW_DESTRUCTIVE=true, then pass --yes.",
+            },
+          });
+        }
+        expect(requests).toHaveLength(0);
+      },
+    );
+  });
+
+  it("destructive dry-run does not call HTTP client and includes method, path, and safety level", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const result = await runCli(["jobs", "delete", "job-1", "--opportunity-id", "opp-1", "--dry-run", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expect(JSON.parse(result.stdout)).toEqual({
+          ok: true,
+          dryRun: true,
+          request: {
+            method: "DELETE",
+            path: "/api/premium/opportunities/opp-1/jobs/job-1",
+            safety: "destructive",
+          },
+        });
+        expect(requests).toHaveLength(0);
+      },
+    );
+  });
+
+  it("destructive commands require all gates before making mocked DELETE calls", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 204, {}),
+      async (baseUrl, requests) => {
+        const result = await runCli(["inventory", "remove-item", "item-1", "--room-id", "room-1", "--opportunity-id", "opp-1", "--yes", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+          SMARTMOVING_ALLOW_WRITES: "true",
+          SMARTMOVING_ALLOW_DESTRUCTIVE: "true",
+        });
+
+        expect(result.code).toBe(0);
+        expect(result.stderr).toBe("");
+        expectJsonOk(result.stdout, {});
+        expect(requests).toHaveLength(1);
+        expect(requests[0]).toMatchObject({
+          method: "DELETE",
+          path: "/v1/api/premium/opportunities/opp-1/inventory/rooms/room-1/items/item-1",
+        });
+      },
+    );
+  });
+
+  it("high-risk non-delete commands require writes and support dry-run without --yes", async () => {
+    await withMockApi(
+      (_request, response) => jsonResponse(response, 500, { shouldNot: "be called" }),
+      async (baseUrl, requests) => {
+        const blocked = await runCli(["jobs", "confirm", "job-1", "--opportunity-id", "opp-1", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+        expect(blocked.code).toBe(1);
+        expect(JSON.parse(blocked.stdout)).toMatchObject({ ok: false, error: { code: "WRITES_DISABLED" } });
+
+        const dryRun = await runCli(["jobs", "confirm", "job-1", "--opportunity-id", "opp-1", "--dry-run", "--json"], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+          SMARTMOVING_ALLOW_WRITES: "true",
+        });
+        expect(dryRun.code).toBe(0);
+        expect(JSON.parse(dryRun.stdout)).toEqual({
+          ok: true,
+          dryRun: true,
+          request: {
+            method: "POST",
+            path: "/api/premium/opportunities/opp-1/jobs/job-1/confirm",
+            safety: "write",
+          },
+        });
+        expect(requests).toHaveLength(0);
+      },
+    );
+  });
+
   it.each(readCommandCases)("$name --json calls the expected read endpoint", async ({ args, expectedPath }) => {
     await withMockApi(
       (_request, response) => jsonResponse(response, 200, { fixture: true }),
@@ -607,6 +715,18 @@ describe("SmartMoving CLI", () => {
       cli: expect.objectContaining({ command: "leads list" }),
       mcp: expect.objectContaining({ toolName: "list_leads" }),
     }));
+    expect(schema.operations).toEqual(expect.arrayContaining([
+      expect.objectContaining({ name: "delete_followup", safety: "destructive", cli: expect.objectContaining({ command: "followups delete" }) }),
+      expect.objectContaining({ name: "delete_job", safety: "destructive", cli: expect.objectContaining({ command: "jobs delete" }) }),
+      expect.objectContaining({ name: "remove_inventory_item", safety: "destructive", cli: expect.objectContaining({ command: "inventory remove-item" }) }),
+      expect.objectContaining({ name: "confirm_job", safety: "write", cli: expect.objectContaining({ command: "jobs confirm" }) }),
+      expect.objectContaining({ name: "convert_lead_to_opportunity", safety: "write", cli: expect.objectContaining({ command: "leads convert" }) }),
+      expect.objectContaining({ name: "submit_inventory_review", safety: "write", cli: expect.objectContaining({ command: "inventory submit-review" }) }),
+      expect.objectContaining({ name: "update_job_stops", safety: "write", cli: expect.objectContaining({ command: "jobs stops update" }) }),
+      expect.objectContaining({ name: "add_job_materials", safety: "write", cli: expect.objectContaining({ command: "jobs materials add" }) }),
+      expect.objectContaining({ name: "add_attachment", safety: "write", cli: expect.objectContaining({ command: "opportunities attachments add" }) }),
+      expect.objectContaining({ name: "create_rooms", safety: "write", cli: expect.objectContaining({ command: "opportunities rooms create" }) }),
+    ]));
   });
 
   it("schema --group and --safety filter the operation registry", async () => {
