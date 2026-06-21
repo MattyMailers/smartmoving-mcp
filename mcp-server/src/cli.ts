@@ -7,6 +7,7 @@ import { SmartMovingClient } from "./client.js";
 import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
+import { registerSchemaCommand } from "./operations/register-cli.js";
 
 interface GlobalOptions {
   json?: boolean;
@@ -258,6 +259,8 @@ program
       process.exitCode = 1;
     }
   });
+
+registerSchemaCommand(program, { jsonOption, printResult });
 
 const mcp = program.command("mcp").description("Print MCP client configuration helpers.");
 

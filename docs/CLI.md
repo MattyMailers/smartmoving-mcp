@@ -98,6 +98,9 @@ node dist/cli.js --help
 node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
 node dist/cli.js doctor --json
 node dist/cli.js mcp config --print-json
+node dist/cli.js schema --json
+node dist/cli.js schema --group leads --json
+node dist/cli.js schema --safety read --json
 node dist/cli.js ping
 node dist/cli.js leads list --page-size 10 --json
 node dist/cli.js reference branches --json
@@ -121,6 +124,9 @@ smartmoving doctor --json
 smartmoving mcp config --print-hermes
 smartmoving mcp config --print-claude
 smartmoving mcp config --print-json
+smartmoving schema --json
+smartmoving schema --group leads --json
+smartmoving schema --safety read --json
 smartmoving reference branches --json
 smartmoving reference move-sizes --json
 smartmoving customers get <customerId> --json
@@ -132,6 +138,8 @@ smartmoving followups due --opportunity-id <opportunityId> --json
 
 Notes:
 
+- `schema --json` prints the shared operation registry contract for all 62 MCP tools without requiring an API key. It includes each operation name, group, safety level, CLI metadata, MCP tool name, output modes, and stable exit codes.
+- Use `schema --group <group> --json` or `schema --safety <read|write|destructive> --json` to filter schema output for agents and command generators.
 - `jobs get` requires the parent opportunity ID because the SmartMoving v1 Premium job detail endpoint is nested under an opportunity.
 - `followups due` is scoped to one opportunity because the current SmartMoving v1 API surface does not expose an account-wide due-followups endpoint.
 - Use `--json` for machine-readable output. Without `--json`, the CLI prints a simple human-readable wrapper around the API response.
@@ -157,7 +165,7 @@ Depending on npm binary resolution, users may also install globally or run the p
 
 - Write commands.
 - Destructive commands.
-- Full coverage of all 62 MCP tools.
+- Generated executable CLI commands for every MCP operation (the schema lists all 62 operations, but the executable CLI remains a smaller read-only MVP).
 - Live API tests in CI.
 - npm publishing.
 - Splitting a dedicated `smartmoving-cli` package.

@@ -330,4 +330,31 @@ describe("SmartMoving CLI", () => {
       },
     });
   });
+
+  it("schema --json prints the 62-operation registry contract without requiring an API key", async () => {
+    const result = await runCli(["schema", "--json"]);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    const schema = JSON.parse(result.stdout);
+    expect(schema).toMatchObject({ ok: true, version: "0.1.0" });
+    expect(schema.operations).toHaveLength(62);
+    expect(schema.operations).toContainEqual(expect.objectContaining({
+      name: "list_leads",
+      group: "leads",
+      safety: "read",
+      cli: expect.objectContaining({ command: "leads list" }),
+      mcp: expect.objectContaining({ toolName: "list_leads" }),
+    }));
+  });
+
+  it("schema --group and --safety filter the operation registry", async () => {
+    const result = await runCli(["schema", "--group", "leads", "--safety", "read", "--json"]);
+
+    expect(result.code).toBe(0);
+    expect(result.stderr).toBe("");
+    const schema = JSON.parse(result.stdout);
+    expect(schema.operations).toHaveLength(4);
+    expect(schema.operations.every((operation: { group: string; safety: string }) => operation.group === "leads" && operation.safety === "read")).toBe(true);
+  });
 });
