@@ -51,5 +51,8 @@
     "dist",
     "README.md",
     "NOTICE.md"
-  ]
+  ],
+  "overrides": {
+    "esbuild": "^0.28.1"
+  }
 }

@@ -1,17 +1,36 @@
 ---
 title: Safety model
-description: Read-only defaults, write gates, destructive gates, and approval guidance.
+description: Local credentials, read-only defaults, write gates, destructive gates, and approval guidance.
 ---
 
 This project can interact with live CRM data. It is provided **as is** and used at your own risk. The maintainers are not responsible for data loss, sync errors, incorrect results, downtime, duplicate or missing records, account issues, business interruption, or other problems arising from use.
 
-## Default: read-only discovery
+## Credentials stay local
+
+For human/CLI onboarding, run:
+
+```bash
+smartmoving init
+```
+
+You can paste an authorized SmartMoving API key and store it locally on that machine. The CLI writes credentials outside the repo:
+
+| File | Purpose |
+| --- | --- |
+| `~/.config/smartmoving/config.json` | Profile, base URL, auth source. |
+| `~/.config/smartmoving/credentials.json` | Local API key storage, file mode `0600` where supported. |
+
+For CI, Docker, server processes, and MCP client configs, use explicit environment variables instead:
 
 ```bash
 export SMARTMOVING_API_KEY="replace-with-your-key"
 export SMARTMOVING_ALLOW_WRITES="false"
 unset SMARTMOVING_ALLOW_DESTRUCTIVE
 ```
+
+API keys should never be passed as command arguments, committed, printed in logs, or pasted into issue/PR text.
+
+## Default: read-only discovery
 
 Allowed:
 

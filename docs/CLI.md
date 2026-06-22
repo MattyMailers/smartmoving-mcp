@@ -17,7 +17,8 @@ This CLI can read and, when explicitly enabled, write live CRM data. It is provi
 
 For this MVP:
 
-- `SMARTMOVING_API_KEY` is required.
+- `SMARTMOVING_API_KEY` can be used for CI, Docker, MCP clients, and server processes.
+- `smartmoving init` can store an API key locally for human CLI onboarding.
 - Do not pass API keys as command arguments.
 - Output may contain CRM data returned by your authorized account; handle it carefully.
 - CLI writes are disabled by default. Write commands require `SMARTMOVING_ALLOW_WRITES=true` or the top-level `--allow-writes` flag.
@@ -64,13 +65,28 @@ Variables used by the package:
 
 ## First-run CLI config
 
-Create a local CLI profile without storing a raw API key:
+Interactive onboarding with optional local key storage:
+
+```bash
+node dist/cli.js init
+```
+
+For non-interactive local storage without putting the key in shell history:
+
+```bash
+printf '%s' "$SMARTMOVING_API_KEY" \
+  | node dist/cli.js init --yes --store-api-key --api-key-stdin --profile default
+```
+
+This writes `~/.config/smartmoving/config.json` and, if local storage is selected, `~/.config/smartmoving/credentials.json` with file mode `0600` where supported.
+
+Environment-variable mode is still available:
 
 ```bash
 node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
 ```
 
-This writes `~/.config/smartmoving/config.json` by default:
+Example config for local storage:
 
 ```json
 {
@@ -79,13 +95,14 @@ This writes `~/.config/smartmoving/config.json` by default:
   "profiles": {
     "default": {
       "baseUrl": "https://api-public.smartmoving.com/v1",
-      "apiKeyEnv": "SMARTMOVING_API_KEY"
+      "apiKeyEnv": "SMARTMOVING_API_KEY",
+      "apiKeySource": "local"
     }
   }
 }
 ```
 
-The config stores the environment variable name only. Keep the real API key in your shell, agent config, keychain, or another private secret store.
+The CLI checks the configured environment variable first, then the local credentials file when the profile uses `apiKeySource: "local"`.
 
 Run diagnostics:
 
@@ -100,7 +117,7 @@ node dist/cli.js doctor --json
 
 ```bash
 node dist/cli.js --help
-node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+node dist/cli.js init
 node dist/cli.js doctor --json
 node dist/cli.js mcp config --print-json
 node dist/cli.js schema --json

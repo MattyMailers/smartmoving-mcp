@@ -4,7 +4,7 @@ Get detailed information about a specific job within an opportunity. Premium tie
 
 Safety level: `READ`
 
-Read-only. Requires a valid `SMARTMOVING_API_KEY`; does not mutate SmartMoving data.
+Read-only. Requires a valid API key from local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; does not mutate SmartMoving data.
 
 ## Arguments
 
@@ -43,7 +43,7 @@ Get detailed information about a specific job within an opportunity. Premium tie
 
 ## Failure modes
 
-- Missing or invalid `SMARTMOVING_API_KEY` returns an auth/read failure.
+- Missing or invalid local credentials or `SMARTMOVING_API_KEY` returns an auth/read failure.
 - Basic-tier keys may receive `403 Forbidden` on Premium endpoints.
 - Invalid UUIDs, missing required options, or invalid JSON input return validation/client errors.
 - SmartMoving rate limits or transient API failures can return HTTP errors; retry cautiously and never duplicate writes without checking SmartMoving state.

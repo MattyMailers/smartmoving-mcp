@@ -160,8 +160,9 @@ describe("SmartMoving CLI", () => {
 
     expect(result.code).toBe(1);
     expect(result.stderr).toBe("");
-    expect(result.stdout).toContain("SMARTMOVING_API_KEY environment variable is required");
-    expect(result.stdout).toContain("do not pass API keys as CLI arguments");
+    expect(result.stdout).toContain("SmartMoving API key is required");
+    expect(result.stdout).toContain("Run smartmoving init to store it locally");
+    expect(result.stdout).toContain("Do not pass API keys as CLI arguments");
     expect(JSON.parse(result.stdout)).toMatchObject({ ok: false, error: { code: "READ_FAILED" } });
   });
 
@@ -564,7 +565,7 @@ describe("SmartMoving CLI", () => {
     expect(result.stdout).toContain("--json");
   });
 
-  it("init --yes writes profile config without storing a raw API key", async () => {
+  it("init --yes writes profile config without storing a raw API key unless local storage is requested", async () => {
     const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
     const configPath = join(dir, "config.json");
 
@@ -576,7 +577,7 @@ describe("SmartMoving CLI", () => {
 
       expect(result.code).toBe(0);
       expect(result.stderr).toBe("");
-      expect(JSON.parse(result.stdout)).toEqual({ ok: true, configPath, profile: "dispatch", apiKeyEnv: "SMARTMOVING_TEST_KEY" });
+      expect(JSON.parse(result.stdout)).toEqual({ ok: true, configPath, profile: "dispatch", apiKeySource: "env", apiKeyEnv: "SMARTMOVING_TEST_KEY" });
 
       const config = JSON.parse(await readFile(configPath, "utf8"));
       expect(config).toEqual({
@@ -586,6 +587,7 @@ describe("SmartMoving CLI", () => {
           dispatch: {
             baseUrl: "https://example.test/v1",
             apiKeyEnv: "SMARTMOVING_TEST_KEY",
+            apiKeySource: "env",
           },
         },
       });
@@ -593,6 +595,64 @@ describe("SmartMoving CLI", () => {
     } finally {
       await rm(dir, { recursive: true, force: true });
     }
+  });
+
+  it("init can store an API key locally and doctor uses it without an environment variable", async () => {
+    await withMockApi(
+      (request, response) => {
+        expect(request.headers["x-api-key"]).toBe(testApiKey);
+        jsonResponse(response, 200, { ok: true });
+      },
+      async (baseUrl) => {
+        const dir = await mkdtemp(join(tmpdir(), "smartmoving-cli-test-"));
+        const configPath = join(dir, "config.json");
+        const credentialsPath = join(dir, "credentials.json");
+
+        try {
+          const init = await runCli(
+            ["init", "--yes", "--profile", "default", "--base-url", baseUrl, "--store-api-key", "--api-key-stdin", "--json"],
+            { SMARTMOVING_CONFIG_PATH: configPath, SMARTMOVING_CREDENTIALS_PATH: credentialsPath },
+            `${testApiKey}\n`,
+          );
+
+          expect(init.code).toBe(0);
+          expect(init.stderr).toBe("");
+          expect(init.stdout).not.toContain(testApiKey);
+          expect(JSON.parse(init.stdout)).toEqual({
+            ok: true,
+            configPath,
+            profile: "default",
+            apiKeySource: "local",
+            credentialsPath,
+          });
+
+          const config = JSON.parse(await readFile(configPath, "utf8"));
+          expect(config.profiles.default).toMatchObject({ baseUrl, apiKeySource: "local" });
+          expect(JSON.stringify(config)).not.toContain(testApiKey);
+
+          const credentials = JSON.parse(await readFile(credentialsPath, "utf8"));
+          expect(credentials.profiles.default.apiKey).toBe(testApiKey);
+
+          const doctor = await runCli(["doctor", "--json"], {
+            SMARTMOVING_CONFIG_PATH: configPath,
+            SMARTMOVING_CREDENTIALS_PATH: credentialsPath,
+          });
+
+          expect(doctor.code).toBe(0);
+          expect(doctor.stderr).toBe("");
+          expect(doctor.stdout).not.toContain(testApiKey);
+          expect(JSON.parse(doctor.stdout)).toMatchObject({
+            ok: true,
+            checks: expect.arrayContaining([
+              expect.objectContaining({ name: "apiKey", ok: true, detail: "present in local credentials for profile default" }),
+              expect.objectContaining({ name: "ping", ok: true }),
+            ]),
+          });
+        } finally {
+          await rm(dir, { recursive: true, force: true });
+        }
+      },
+    );
   });
 
   it("doctor --json reports missing API key with stable JSON and no stdout noise", async () => {

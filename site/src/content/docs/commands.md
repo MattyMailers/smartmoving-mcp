@@ -9,7 +9,7 @@ The command reference is generated from `node mcp-server/dist/cli.js schema --js
 
 ## Safety gates
 
-- **READ** commands require `SMARTMOVING_API_KEY`; they do not mutate CRM data.
+- **READ** commands require local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; they do not mutate CRM data.
 - **WRITE** commands are blocked unless `SMARTMOVING_ALLOW_WRITES=true` or `--allow-writes` is set. Use `--dry-run` first and require human approval before real writes.
 - **DESTRUCTIVE** commands require writes, `SMARTMOVING_ALLOW_DESTRUCTIVE=true`, and explicit confirmation such as `--yes`. Use only after separate approval.
 

@@ -63,8 +63,9 @@ The same package exposes a `smartmoving` CLI binary for diagnostics and smoke te
 
 ```bash
 npm install -g smartmoving-mcp-server
-smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving init
 smartmoving doctor --json
+smartmoving schema --json
 smartmoving smoke read --json
 smartmoving smoke write --dry-run --json
 ```
@@ -92,12 +93,13 @@ The server uses stdio, so it is normally launched by an MCP client rather than r
 
 ## SmartMoving CLI MVP
 
-This repo also includes an **unofficial, safety-gated `smartmoving` CLI MVP** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and environment variables as the MCP server, but it is intentionally smaller than the full MCP tool catalog.
+This repo also includes an **unofficial, safety-gated `smartmoving` CLI** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and operation registry as the MCP server, with local `smartmoving init` onboarding for CLI users and explicit environment-variable auth for MCP/CI/server contexts.
 
 MCP vs CLI positioning:
 
 - Use the MCP server for agent-native tool discovery and controlled MCP tool calls.
-- Use the CLI for explicit terminal commands, `--json` output, smoke tests, and shell scripting.
+- Use the CLI for explicit terminal commands, `--json` output, smoke tests, install diagnostics, and shell scripting.
+- The CLI and MCP server share the same operation registry, so command docs, `schema --json`, and MCP tool metadata stay aligned.
 - The CLI includes guarded read, write, and destructive commands. Writes are blocked unless explicitly enabled, destructive commands require the additional destructive gate plus `--yes`, and dry-run is the recommended first step.
 
 Local CLI test from a clone:
@@ -105,10 +107,10 @@ Local CLI test from a clone:
 ```bash
 cd mcp-server
 npm install
-export SMARTMOVING_API_KEY="your-key-here"
-export SMARTMOVING_ALLOW_WRITES="false"
 npm run build
-node dist/cli.js ping
+printf '%s' "$SMARTMOVING_API_KEY" \
+  | node dist/cli.js init --yes --store-api-key --api-key-stdin --profile default
+node dist/cli.js doctor --json
 node dist/cli.js leads list --page-size 10 --json
 node dist/cli.js reference branches --json
 node dist/cli.js smoke read --json

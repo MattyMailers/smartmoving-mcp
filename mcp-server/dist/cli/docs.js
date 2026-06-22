@@ -16,7 +16,7 @@ function safetyBadge(safety) {
 }
 function safetyRequirement(safety) {
     if (safety === "read") {
-        return "Read-only. Requires a valid `SMARTMOVING_API_KEY`; does not mutate SmartMoving data.";
+        return "Read-only. Requires a valid API key from local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; does not mutate SmartMoving data.";
     }
     if (safety === "write") {
         return "WRITE. Blocked unless `SMARTMOVING_ALLOW_WRITES=true` or `--allow-writes` is used. Prefer `--dry-run` before `--yes`.";
@@ -69,7 +69,7 @@ function renderIndex(operations) {
         return `## ${group}\n\n${entries}`;
     })
         .join("\n\n");
-    return `# SmartMoving CLI Command Index\n\n> Generated from \`smartmoving schema --json\`. Do not edit command pages by hand; run \`smartmoving docs generate\` from \`mcp-server/\` after changing the operation registry.\n\nThe SmartMoving CLI is an unofficial, safety-gated terminal interface for authorized SmartMoving API users. It uses the same registry metadata as the MCP server so agents can map CLI commands to MCP tools.\n\n## Safety badges\n\n- READ: read-only command. Requires \`SMARTMOVING_API_KEY\`; does not mutate CRM data.\n- WRITE: requires \`SMARTMOVING_ALLOW_WRITES=true\` or \`--allow-writes\`; dry-run first.\n- DESTRUCTIVE: requires writes + \`SMARTMOVING_ALLOW_DESTRUCTIVE=true\` + \`--yes\`; explicit human approval recommended.\n\n${sections}\n`;
+    return `# SmartMoving CLI Command Index\n\n> Generated from \`smartmoving schema --json\`. Do not edit command pages by hand; run \`smartmoving docs generate\` from \`mcp-server/\` after changing the operation registry.\n\nThe SmartMoving CLI is an unofficial, safety-gated terminal interface for authorized SmartMoving API users. It uses the same registry metadata as the MCP server so agents can map CLI commands to MCP tools.\n\n## Safety badges\n\n- READ: read-only command. Requires a local \`smartmoving init\` credential or \`SMARTMOVING_API_KEY\`; does not mutate CRM data.\n- WRITE: requires \`SMARTMOVING_ALLOW_WRITES=true\` or \`--allow-writes\`; dry-run first.\n- DESTRUCTIVE: requires writes + \`SMARTMOVING_ALLOW_DESTRUCTIVE=true\` + \`--yes\`; explicit human approval recommended.\n\n${sections}\n`;
 }
 function defaultOutputDir() {
     return resolve(process.cwd(), "..", "docs", "commands");

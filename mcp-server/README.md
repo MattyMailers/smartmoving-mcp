@@ -22,12 +22,15 @@ In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. Se
 
 ## CLI MVP
 
-This package also builds a small, unofficial `smartmoving` CLI for authorized SmartMoving API users running terminal agents, scripts, smoke tests, and local debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
+This package also builds an unofficial `smartmoving` CLI for authorized SmartMoving API users running terminal agents, scripts, smoke tests, onboarding diagnostics, and local debugging. It uses the same API client and operation registry as the MCP server. Human CLI users can store an API key locally with `smartmoving init`; MCP clients, CI, Docker, and server processes should keep using explicit environment variables. Do not pass API keys as command arguments.
 
 Use the MCP server when an agent should discover and call SmartMoving tools through MCP. Use the CLI when you want explicit terminal commands and optional machine-readable `--json` output. CLI writes are disabled by default, destructive CLI commands require both write/destructive environment gates plus `--yes`, and `--dry-run` should be used before any live change.
 
 ```bash
 npm run build
+node dist/cli.js init
+node dist/cli.js doctor --json
+node dist/cli.js schema --json
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js ping
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference branches --json
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference move-sizes --json
@@ -59,8 +62,9 @@ Global install usage after publish:
 
 ```bash
 npm install -g smartmoving-mcp-server
-smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving init
 smartmoving doctor --json
+smartmoving schema --json
 smartmoving smoke read --json
 smartmoving smoke write --dry-run --json
 ```

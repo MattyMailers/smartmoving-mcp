@@ -9,7 +9,7 @@ Look up an opportunity by its quote number (e.g. 'Q-12345'). Use this when you h
 
 ## Safety
 
-**READ** — Read-only. Requires `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
+**READ** — Read-only. Requires local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
 
 ## Arguments
 

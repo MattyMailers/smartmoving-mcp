@@ -3,9 +3,17 @@ title: Quickstart
 description: Fast, safe setup path for SmartMoving MCP + CLI.
 ---
 
-Start read-only, verify the package locally, then connect your agent.
+Start read-only, store the API key locally if you want easy CLI onboarding, then connect your agent.
 
-## 1. Clone and build
+## 1. Install
+
+After npm publish, the one-line install is:
+
+```bash
+npm install -g smartmoving-mcp-server
+```
+
+From a source checkout before npm publish:
 
 ```bash
 git clone https://github.com/MattyMailers/smartmoving-mcp.git
@@ -14,36 +22,59 @@ npm install
 npm run build
 ```
 
-## 2. Keep the API key private
+Use `node dist/cli.js` instead of `smartmoving` when running from source.
 
-Use an authorized SmartMoving External API key. Do not commit it, paste it into GitHub, or pass it as a command argument.
+## 2. Initialize local CLI credentials
+
+Interactive onboarding:
 
 ```bash
+smartmoving init
+```
+
+`init` asks for a profile, base URL, and whether to store the API key locally on this machine. If you choose local storage, the key is written to a machine-local credentials file, not to the repo and not to command history.
+
+Default locations:
+
+| File | Purpose |
+| --- | --- |
+| `~/.config/smartmoving/config.json` | Profile, base URL, auth mode. |
+| `~/.config/smartmoving/credentials.json` | Local API key storage, file mode `0600` where supported. |
+
+For non-interactive setup without putting the key in shell history:
+
+```bash
+printf '%s' "$SMARTMOVING_API_KEY" \
+  | smartmoving init --yes --store-api-key --api-key-stdin --profile default
+```
+
+Environment-variable mode still works for CI, Docker, servers, and MCP clients:
+
+```bash
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
 export SMARTMOVING_API_KEY="replace-with-your-key"
-export SMARTMOVING_ALLOW_WRITES="false"
 ```
 
-Reads are available with the key. Writes are blocked unless you later opt in.
-
-## 3. Initialize CLI config
+## 3. Verify safely
 
 ```bash
-node dist/cli.js init --yes --profile default --api-key-env SMARTMOVING_API_KEY
-node dist/cli.js doctor --json
-node dist/cli.js schema --json
+smartmoving doctor --json
+smartmoving schema --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
 ```
 
-The CLI config stores the environment variable name only, not the raw key.
+`smoke write --dry-run` prints a synthetic request and does not call SmartMoving.
 
 ## 4. Connect an MCP client
 
-Use the local stdio server:
+Use the MCP server binary from the same package:
 
 ```text
-node /absolute/path/to/smartmoving-mcp/mcp-server/dist/index.js
+smartmoving-mcp-server
 ```
 
-Pass these env vars in your MCP client config:
+MCP clients should normally receive the API key through their environment/config, not from the CLI credentials file, because MCP clients launch isolated subprocesses and should make credentials explicit.
 
 ```text
 SMARTMOVING_API_KEY=replace-with-your-key
@@ -52,27 +83,9 @@ SMARTMOVING_ALLOW_WRITES=false
 
 See [MCP setup](/mcp-setup/) for copy-paste client snippets.
 
-## 5. Verify safely
+## 5. One-off npx usage
 
-Ask your agent to ping SmartMoving and list tools. Or run CLI smoke checks:
-
-```bash
-node dist/cli.js doctor --json
-node dist/cli.js smoke read --json
-node dist/cli.js smoke write --dry-run --json
-```
-
-`smoke write --dry-run` prints a synthetic request and does not call SmartMoving.
-
-## After npm publish
-
-Once maintainers publish, the one-line global install is:
-
-```bash
-npm install -g smartmoving-mcp-server
-```
-
-One-off npx CLI usage should use npm's explicit package resolution:
+For one-off CLI usage, npm's explicit package resolution is clearest:
 
 ```bash
 SMARTMOVING_API_KEY="replace-with-your-key" \

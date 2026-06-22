@@ -9,7 +9,7 @@ Get all lost reason options. These are required when changing an opportunity's s
 
 ## Safety
 
-**READ** — Read-only. Requires `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
+**READ** — Read-only. Requires local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
 
 ## Arguments
 

@@ -6,7 +6,7 @@ The SmartMoving CLI is an unofficial, safety-gated terminal interface for author
 
 ## Safety badges
 
-- READ: read-only command. Requires `SMARTMOVING_API_KEY`; does not mutate CRM data.
+- READ: read-only command. Requires a local `smartmoving init` credential or `SMARTMOVING_API_KEY`; does not mutate CRM data.
 - WRITE: requires `SMARTMOVING_ALLOW_WRITES=true` or `--allow-writes`; dry-run first.
 - DESTRUCTIVE: requires writes + `SMARTMOVING_ALLOW_DESTRUCTIVE=true` + `--yes`; explicit human approval recommended.
 

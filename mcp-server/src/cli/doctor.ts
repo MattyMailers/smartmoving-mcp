@@ -1,6 +1,6 @@
 import { access } from "node:fs/promises";
 import { SmartMovingClient } from "../client.js";
-import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, readConfig, selectProfile } from "./config.js";
+import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, readConfig, resolveProfileAuth, selectProfile } from "./config.js";
 import { formatError } from "./format.js";
 
 export interface DoctorCheck {
@@ -37,13 +37,13 @@ function packageVersion(): string {
   return process.env.npm_package_version ?? "0.1.0";
 }
 
-function errorFromCheck(checks: DoctorCheck[], apiKeyEnv: string): DoctorError | undefined {
+function errorFromCheck(checks: DoctorCheck[], apiKeyLabel: string): DoctorError | undefined {
   const missingApiKey = checks.find((check) => check.name === "apiKey" && !check.ok);
   if (missingApiKey) {
     return {
       code: "AUTH_MISSING",
-      message: `${apiKeyEnv} is required`,
-      hint: `Run smartmoving init or export ${apiKeyEnv}.`,
+      message: `${apiKeyLabel} is required`,
+      hint: `Run smartmoving init or export ${apiKeyLabel}.`,
     };
   }
 
@@ -70,7 +70,8 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
   checks.push({ name: "package", ok: true, detail: packageVersion() });
 
   const path = configPath();
-  let apiKeyEnv = DEFAULT_API_KEY_ENV;
+  let apiKeyLabel = DEFAULT_API_KEY_ENV;
+  let apiKey: string | undefined;
   let baseUrl = process.env.SMARTMOVING_BASE_URL ?? DEFAULT_BASE_URL;
 
   try {
@@ -79,18 +80,16 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
     checks.push({ name: "config", ok: true, detail: path });
     const profile = selectProfile(config, options.profile);
     checks.push({ name: "profile", ok: true, detail: profile.name });
-    apiKeyEnv = profile.apiKeyEnv;
-    baseUrl = process.env.SMARTMOVING_BASE_URL ?? profile.baseUrl;
+    apiKeyLabel = profile.apiKeyEnv;
+    const auth = await resolveProfileAuth(profile.name);
+    apiKey = auth.apiKey;
+    baseUrl = auth.baseUrl;
+    checks.push({ name: "apiKey", ok: Boolean(apiKey), detail: auth.apiKeyDetail });
   } catch (error) {
     checks.push({ name: "config", ok: false, detail: formatError(error) });
     checks.push({ name: "profile", ok: false, detail: `profile ${options.profile ?? "default"} not available` });
-  }
-
-  const apiKey = process.env[apiKeyEnv];
-  if (apiKey) {
-    checks.push({ name: "apiKey", ok: true, detail: `present via ${apiKeyEnv}` });
-  } else {
-    checks.push({ name: "apiKey", ok: false, detail: `${apiKeyEnv} is missing` });
+    apiKey = process.env[apiKeyLabel];
+    checks.push({ name: "apiKey", ok: Boolean(apiKey), detail: apiKey ? `present via ${apiKeyLabel}` : `${apiKeyLabel} is missing` });
   }
 
   try {
@@ -122,6 +121,6 @@ export async function runDoctor(options: DoctorOptions = {}): Promise<DoctorResu
     ok,
     checks,
     safety,
-    error: ok ? undefined : errorFromCheck(operationalChecks, apiKeyEnv),
+    error: ok ? undefined : errorFromCheck(operationalChecks, apiKeyLabel),
   };
 }

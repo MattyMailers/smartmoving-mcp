@@ -1,15 +1,15 @@
 ---
 title: CLI docs
-description: Use the safety-gated smartmoving CLI for diagnostics, schema discovery, command docs, and smoke tests.
+description: Use the safety-gated smartmoving CLI for onboarding, diagnostics, schema discovery, command docs, and smoke tests.
 ---
 
-The `smartmoving` CLI is a guarded MVP built from the same TypeScript package as the MCP server. Use MCP for agent-native tool discovery; use the CLI for explicit terminal commands and machine-readable output.
+The `smartmoving` CLI is a first-class surface built from the same operation registry as the MCP server. Use MCP for agent-native tool calls; use the CLI for terminal agents, humans, JSON scripts, smoke tests, and install diagnostics.
 
 ## Core commands
 
 ```bash
 smartmoving --help
-smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving init
 smartmoving doctor --json
 smartmoving mcp config --print-hermes
 smartmoving mcp config --print-claude
@@ -22,6 +22,57 @@ smartmoving smoke write --dry-run --json
 ```
 
 From a source checkout before npm publish, replace `smartmoving` with `node dist/cli.js` from `mcp-server/`.
+
+## Local credential onboarding
+
+Interactive setup:
+
+```bash
+smartmoving init
+```
+
+The CLI asks whether to store the API key locally on this machine. If yes, it writes:
+
+| File | Contains |
+| --- | --- |
+| `~/.config/smartmoving/config.json` | Profile name, base URL, auth source. |
+| `~/.config/smartmoving/credentials.json` | API key for that profile, local file mode `0600` where supported. |
+
+Non-interactive local storage, without putting the key in shell history:
+
+```bash
+printf '%s' "$SMARTMOVING_API_KEY" \
+  | smartmoving init --yes --store-api-key --api-key-stdin --profile default
+```
+
+Environment-variable mode is still supported and preferred for CI, Docker, server processes, and MCP client configs:
+
+```bash
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+export SMARTMOVING_API_KEY="replace-with-your-key"
+```
+
+The CLI resolves auth in this order:
+
+1. The configured environment variable, default `SMARTMOVING_API_KEY`.
+2. Local credentials for the selected profile when `apiKeySource` is `local`.
+
+API keys are never accepted as command arguments and are redacted from errors.
+
+## CLI and MCP parity
+
+The package uses one shared operation registry:
+
+```text
+SmartMoving API client
+  -> operation registry
+    -> MCP tools
+    -> CLI commands
+    -> schema --json
+    -> generated docs
+```
+
+That means `smartmoving schema --json` is the stable contract terminal agents should inspect before running commands, and each CLI command maps back to a related MCP tool.
 
 ## JSON output contract
 

@@ -9,7 +9,7 @@ Read all note fields on a specific job. This calls Premium job detail with Inclu
 
 ## Safety
 
-**READ** — Read-only. Requires `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
+**READ** — Read-only. Requires local `smartmoving init` credentials or `SMARTMOVING_API_KEY`; does not mutate SmartMoving CRM data.
 
 ## Arguments
 

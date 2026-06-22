@@ -6,7 +6,7 @@ import { basename } from "node:path";
 import { Command, Option } from "commander";
 import { SmartMovingClient } from "./client.js";
 import { registerAgentCommand } from "./cli/agent.js";
-import { configPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, writeInitialConfig } from "./cli/config.js";
+import { configPath, credentialsPath, DEFAULT_API_KEY_ENV, DEFAULT_BASE_URL, resolveProfileAuth, writeInitialConfig, writeStoredApiKey } from "./cli/config.js";
 import { registerDocsCommand } from "./cli/docs.js";
 import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
@@ -23,14 +23,25 @@ function writesEnabled(options) {
 function destructiveEnabled(options) {
     return options?.allowDestructive === true || program.opts().allowDestructive === true || envFlag("SMARTMOVING_ALLOW_DESTRUCTIVE");
 }
-function requireClient() {
-    const apiKey = process.env.SMARTMOVING_API_KEY;
+async function requireClient(options) {
+    let apiKey = process.env.SMARTMOVING_API_KEY;
+    let baseUrl = process.env.SMARTMOVING_BASE_URL;
     if (!apiKey) {
-        throw new Error("SMARTMOVING_API_KEY environment variable is required. Set it in your shell or agent environment; do not pass API keys as CLI arguments.");
+        try {
+            const auth = await resolveProfileAuth(options?.profile ?? program.opts().profile);
+            apiKey = auth.apiKey;
+            baseUrl = auth.baseUrl;
+        }
+        catch {
+            // Fall through to the stable auth error below.
+        }
+    }
+    if (!apiKey) {
+        throw new Error("SmartMoving API key is required. Run smartmoving init to store it locally, or set SMARTMOVING_API_KEY in your shell or agent environment. Do not pass API keys as CLI arguments.");
     }
     return new SmartMovingClient({
         apiKey,
-        baseUrl: process.env.SMARTMOVING_BASE_URL,
+        baseUrl,
         allowWrites: writesEnabled(program.opts()),
         allowDestructive: destructiveEnabled(program.opts()),
     });
@@ -74,7 +85,7 @@ function printReadResult(label, value, options) {
 }
 async function runRead(label, options, action) {
     try {
-        const result = await action(requireClient());
+        const result = await action(await requireClient(options));
         printReadResult(label, result, options);
     }
     catch (error) {
@@ -187,7 +198,7 @@ async function runWrite(label, options, prepare) {
             return;
         }
         await confirmWrite(options, request);
-        const client = requireClient();
+        const client = await requireClient(options);
         const result = request.method === "POST"
             ? await client.post(request.path, request.body)
             : request.method === "PUT"
@@ -241,27 +252,83 @@ async function promptDefault(question, defaultValue) {
         reader.close();
     }
 }
+async function promptYesNo(question, defaultValue) {
+    const defaultLabel = defaultValue ? "Y/n" : "y/N";
+    const reader = createInterface({ input, output });
+    try {
+        const answer = (await reader.question(`${question} (${defaultLabel}): `)).trim().toLowerCase();
+        if (!answer) {
+            return defaultValue;
+        }
+        return ["y", "yes", "true", "1"].includes(answer);
+    }
+    finally {
+        reader.close();
+    }
+}
+async function promptRequired(question) {
+    const reader = createInterface({ input, output });
+    try {
+        const answer = await reader.question(`${question}: `);
+        const trimmed = answer.trim();
+        if (!trimmed) {
+            throw new Error(`${question} is required.`);
+        }
+        return trimmed;
+    }
+    finally {
+        reader.close();
+    }
+}
+async function readOneStdinValue() {
+    const text = await readStdinText();
+    const trimmed = text.trim();
+    if (!trimmed) {
+        throw new Error("API key cannot be empty.");
+    }
+    return trimmed;
+}
 async function runInit(options) {
     try {
         let profile = options.profile ?? program.opts().profile ?? "default";
         let apiKeyEnv = options.apiKeyEnv ?? DEFAULT_API_KEY_ENV;
         let baseUrl = options.baseUrl ?? DEFAULT_BASE_URL;
+        let storeApiKey = options.storeApiKey === true;
+        let apiKeyToStore;
         if (!options.yes) {
             profile = await promptDefault("Profile name", profile);
-            apiKeyEnv = await promptDefault("API key environment variable", apiKeyEnv);
             baseUrl = await promptDefault("Base URL", baseUrl);
+            storeApiKey = await promptYesNo("Store API key locally on this machine", true);
+            if (storeApiKey) {
+                apiKeyToStore = await promptRequired("Paste SmartMoving API key");
+            }
+            else {
+                apiKeyEnv = await promptDefault("API key environment variable", apiKeyEnv);
+            }
         }
         if (options.apiKeyStdin) {
-            if (!options.quiet) {
-                console.error("Note: --api-key-stdin validates that a key was provided, but raw API keys are never stored in config.");
+            if (!storeApiKey) {
+                throw new Error("--api-key-stdin requires --store-api-key so the key has somewhere local to go.");
             }
-            for await (const _chunk of input) {
-                break;
-            }
+            apiKeyToStore = await readOneStdinValue();
+        }
+        if (storeApiKey && !apiKeyToStore && process.env[apiKeyEnv]) {
+            apiKeyToStore = process.env[apiKeyEnv];
+        }
+        if (storeApiKey && !apiKeyToStore) {
+            throw new Error("--store-api-key requires --api-key-stdin, interactive input, or the configured API key environment variable.");
         }
         const path = configPath();
-        const config = await writeInitialConfig({ profile, apiKeyEnv, baseUrl }, path);
-        const result = { ok: true, configPath: path, profile: config.defaultProfile, apiKeyEnv: config.profiles[config.defaultProfile]?.apiKeyEnv };
+        const config = await writeInitialConfig({ profile, apiKeyEnv, baseUrl, apiKeySource: storeApiKey ? "local" : "env" }, path);
+        const selected = config.profiles[config.defaultProfile];
+        let storedCredentialsPath;
+        if (storeApiKey && apiKeyToStore) {
+            storedCredentialsPath = credentialsPath();
+            await writeStoredApiKey(config.defaultProfile, apiKeyToStore, storedCredentialsPath);
+        }
+        const result = storeApiKey
+            ? { ok: true, configPath: path, profile: config.defaultProfile, apiKeySource: "local", credentialsPath: storedCredentialsPath }
+            : { ok: true, configPath: path, profile: config.defaultProfile, apiKeySource: "env", apiKeyEnv: selected?.apiKeyEnv };
         printResult("Initialized SmartMoving CLI config", result, options);
         if (options.runDoctor) {
             const doctor = await runDoctor({ profile: config.defaultProfile });
@@ -359,11 +426,12 @@ program
     .showSuggestionAfterError();
 program
     .command("init")
-    .description("Create SmartMoving CLI config without storing raw API keys.")
+    .description("Create SmartMoving CLI config and optionally store an API key locally.")
     .addOption(jsonOption())
     .addOption(profileOption())
-    .option("--api-key-env <name>", "environment variable that will hold the API key", DEFAULT_API_KEY_ENV)
-    .option("--api-key-stdin", "read an API key from stdin for validation only; the raw key is not stored")
+    .option("--api-key-env <name>", "environment variable that will hold the API key when local storage is not used", DEFAULT_API_KEY_ENV)
+    .option("--store-api-key", "store an API key in a local machine-only credentials file")
+    .option("--api-key-stdin", "read an API key from stdin; requires --store-api-key")
     .option("--base-url <url>", "SmartMoving API base URL", DEFAULT_BASE_URL)
     .option("--yes", "accept defaults and do not prompt")
     .option("--run-doctor", "run doctor after writing config")
