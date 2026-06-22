@@ -1,0 +1,33 @@
+<svg xmlns="http://www.w3.org/2000/svg" viewBox="0 0 640 420" role="img" aria-labelledby="title desc">
+  <title id="title">SmartMoving MCP + CLI docs illustration</title>
+  <desc id="desc">Abstract boxes connecting an AI agent, MCP server, CLI, and SmartMoving API.</desc>
+  <defs>
+    <linearGradient id="g" x1="0" x2="1" y1="0" y2="1">
+      <stop offset="0" stop-color="#7c3aed"/>
+      <stop offset="1" stop-color="#06b6d4"/>
+    </linearGradient>
+  </defs>
+  <rect width="640" height="420" rx="36" fill="#0f172a"/>
+  <circle cx="522" cy="84" r="92" fill="#1e293b"/>
+  <circle cx="116" cy="332" r="120" fill="#111827"/>
+  <g fill="none" stroke="url(#g)" stroke-width="5" stroke-linecap="round">
+    <path d="M178 130h102c38 0 38 60 76 60h104"/>
+    <path d="M180 282h104c36 0 36-58 72-58h104"/>
+    <path d="M318 160v92"/>
+  </g>
+  <g font-family="ui-sans-serif,system-ui,-apple-system,Segoe UI,sans-serif" font-weight="700">
+    <rect x="70" y="82" width="154" height="96" rx="18" fill="#1e293b" stroke="#475569"/>
+    <text x="147" y="124" text-anchor="middle" font-size="22" fill="#fff">AI Agent</text>
+    <text x="147" y="151" text-anchor="middle" font-size="15" fill="#94a3b8">Claude · Hermes</text>
+    <rect x="246" y="150" width="148" height="96" rx="18" fill="#312e81" stroke="#818cf8"/>
+    <text x="320" y="193" text-anchor="middle" font-size="24" fill="#fff">MCP</text>
+    <text x="320" y="220" text-anchor="middle" font-size="15" fill="#c4b5fd">62 tools</text>
+    <rect x="70" y="234" width="154" height="96" rx="18" fill="#1e293b" stroke="#475569"/>
+    <text x="147" y="276" text-anchor="middle" font-size="22" fill="#fff">CLI</text>
+    <text x="147" y="303" text-anchor="middle" font-size="15" fill="#94a3b8">schema --json</text>
+    <rect x="416" y="150" width="154" height="96" rx="18" fill="#164e63" stroke="#22d3ee"/>
+    <text x="493" y="193" text-anchor="middle" font-size="20" fill="#fff">SmartMoving</text>
+    <text x="493" y="220" text-anchor="middle" font-size="15" fill="#a5f3fc">External API v1</text>
+  </g>
+  <text x="320" y="374" text-anchor="middle" font-family="ui-sans-serif,system-ui" font-size="18" fill="#e2e8f0">read-only by default · writes gated · destructive double-gated</text>
+</svg>
