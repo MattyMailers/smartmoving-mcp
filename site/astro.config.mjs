@@ -2,7 +2,7 @@ import { defineConfig } from 'astro/config';
 import starlight from '@astrojs/starlight';
 
 export default defineConfig({
-  site: 'https://mattymailers.github.io/smartmoving-mcp/',
+  site: 'https://smartmoving-mcp-docs.vercel.app/',
   integrations: [
     starlight({
       title: 'SmartMoving MCP + CLI',

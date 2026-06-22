@@ -7,3 +7,5 @@ coverage/
 .env.local
 site/.astro/
 site/dist/
+site/.vercel/
+.hermes/
