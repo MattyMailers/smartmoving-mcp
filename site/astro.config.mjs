@@ -36,6 +36,29 @@ export default defineConfig({
             { label: 'Safety model', slug: 'safety-model' },
             { label: 'Live testing', slug: 'live-testing' }
           ]
+        },
+        {
+          label: 'Agent setup',
+          items: [
+            { label: 'Hermes Agent', slug: 'agents/hermes' },
+            { label: 'Claude Desktop', slug: 'agents/claude-desktop' },
+            { label: 'Cursor / generic MCP', slug: 'agents/cursor-generic' }
+          ]
+        },
+        {
+          label: 'Generated commands',
+          collapsed: true,
+          items: [
+            { label: 'All commands', slug: 'commands' },
+            { label: 'Customers', slug: 'commands/customers' },
+            { label: 'Leads', slug: 'commands/leads' },
+            { label: 'Opportunities', slug: 'commands/opportunities' },
+            { label: 'Jobs', slug: 'commands/jobs' },
+            { label: 'Inventory', slug: 'commands/inventory' },
+            { label: 'Followups', slug: 'commands/followups' },
+            { label: 'Communication', slug: 'commands/communication' },
+            { label: 'Reference', slug: 'commands/reference' }
+          ]
         }
       ],
       customCss: ['./src/styles/custom.css'],
