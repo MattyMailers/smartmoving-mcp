@@ -20,6 +20,70 @@ npm start
 
 In normal use, your AI agent launches `dist/index.js` as an MCP stdio server. See [`../docs/AGENT-INSTALL.md`](../docs/AGENT-INSTALL.md).
 
+## CLI MVP
+
+This package also builds a small, unofficial `smartmoving` CLI for authorized SmartMoving API users running terminal agents, scripts, smoke tests, and local debugging. It uses the same `SMARTMOVING_API_KEY` and `SMARTMOVING_BASE_URL` environment variables as the MCP server. Do not pass API keys as command arguments.
+
+Use the MCP server when an agent should discover and call SmartMoving tools through MCP. Use the CLI when you want explicit terminal commands and optional machine-readable `--json` output. CLI writes are disabled by default, destructive CLI commands require both write/destructive environment gates plus `--yes`, and `--dry-run` should be used before any live change.
+
+```bash
+npm run build
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js ping
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference branches --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reference move-sizes --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js customers get CUSTOMER_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js leads list --page-size 25 --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js opportunities get OPPORTUNITY_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js jobs get JOB_UUID --opportunity-id OPPORTUNITY_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js followups due --opportunity-id OPPORTUNITY_UUID --json
+```
+
+The CLI includes read commands plus guarded write/destructive commands. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
+
+See [`../docs/CLI.md`](../docs/CLI.md) for local-clone setup, environment variables, future npm/npx usage, safety notes, and deferred CLI work. Generate registry-backed command docs with:
+
+```bash
+node dist/cli.js docs generate --json
+```
+
+The generated index is written to [`../docs/commands/README.md`](../docs/commands/README.md).
+
+Future package usage after maintainers publish a version to npm may look like:
+
+```bash
+SMARTMOVING_API_KEY="your-key-here" npx -y --package smartmoving-mcp-server smartmoving ping
+SMARTMOVING_API_KEY="your-key-here" npx -y --package smartmoving-mcp-server smartmoving doctor --json
+```
+
+Global install usage after publish:
+
+```bash
+npm install -g smartmoving-mcp-server
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+```
+
+The package exposes both documented binaries:
+
+```text
+smartmoving
+smartmoving-mcp-server
+```
+
+Smoke commands are intentionally conservative:
+
+```bash
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+SMARTMOVING_LIVE_TESTS=true SMARTMOVING_API_KEY="your-key-here" smartmoving smoke live --read-only --json
+```
+
+Live smoke tests never run in CI and require `SMARTMOVING_LIVE_TESTS=true`. Live write smoke tests are intentionally unsupported until a dedicated sandbox-account workflow exists.
+
+Do not publish from a PR unless the maintainer explicitly decides to release.
+
 ## Environment variables
 
 - `SMARTMOVING_API_KEY`, required

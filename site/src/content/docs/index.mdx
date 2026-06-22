@@ -1,0 +1,78 @@
+---
+title: SmartMoving MCP + CLI
+sideLabel: Home
+description: Unofficial SmartMoving MCP server and safety-gated CLI for authorized External API users.
+template: splash
+hero:
+  tagline: Unofficial SmartMoving MCP + CLI for authorized SmartMoving External API users.
+  image:
+    alt: SmartMoving MCP + CLI
+    file: ../../assets/hero.svg
+  actions:
+    - text: Quickstart
+      link: /quickstart/
+      icon: right-arrow
+      variant: primary
+    - text: Install
+      link: /install/
+      icon: download
+    - text: Commands
+      link: /commands/
+      icon: document
+---
+
+import { Card, CardGrid } from '@astrojs/starlight/components';
+
+<div class="hero-note">
+<strong>Launch status:</strong> public 0.1.0 prep. This repo documents an <strong>unofficial</strong> MCP server and CLI with <strong>62 operations</strong>, <strong>read-only by default safety gates</strong>, and an <strong>agent-ready schema</strong> for terminal and MCP clients.
+</div>
+
+## What this project is
+
+SmartMoving MCP + CLI exposes the SmartMoving External API v1 to authorized users through two local interfaces:
+
+- an MCP stdio server for Claude Desktop, Hermes Agent, Cursor, Codex-style clients, and other MCP-compatible agents;
+- a `smartmoving` CLI for diagnostics, schema discovery, smoke tests, command docs, and scripted workflows.
+
+> **Unofficial project.** This project is not affiliated with, endorsed by, sponsored by, or certified by SmartMoving, LLC. "SmartMoving" is used only to identify the external API this project interoperates with.
+
+## Why agents use it
+
+<CardGrid>
+  <Card title="62 operations" icon="seti:typescript">Customers, leads, opportunities, jobs, inventory, follow-ups, communication, reference data, and API health checks.</Card>
+  <Card title="Safe by default" icon="seti:lock">Reads are available with an API key. Writes need `SMARTMOVING_ALLOW_WRITES=true`; destructive tools also need `SMARTMOVING_ALLOW_DESTRUCTIVE=true`.</Card>
+  <Card title="Agent-ready schema" icon="seti:json">`smartmoving schema --json` exposes names, groups, safety levels, CLI metadata, related MCP tools, output modes, and exit codes.</Card>
+  <Card title="CLI + MCP" icon="terminal">Use MCP for native tool discovery and CLI for explicit terminal workflows, smoke tests, and machine-readable JSON.</Card>
+</CardGrid>
+
+## One-line install CTA
+
+After maintainers publish the npm package, run:
+
+```bash
+npm install -g smartmoving-mcp-server
+```
+
+Then configure your API key privately and start with read-only commands:
+
+```bash
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving schema --json
+```
+
+For one-off MCP launches after publish:
+
+```bash
+npx -y smartmoving-mcp-server
+```
+
+For local development before publish, clone the repo and build from `mcp-server/`.
+
+## Next pages
+
+- [Quickstart](/quickstart/) — shortest safe path from clone or npm to a working CLI/MCP setup.
+- [Install](/install/) — source, future npm, and environment setup.
+- [MCP setup](/mcp-setup/) — client snippets for Claude, Hermes, and generic MCP.
+- [CLI docs](/cli/) — command patterns and JSON output contract.
+- [Safety model](/safety-model/) — read/write/destructive gates and approval checklist.

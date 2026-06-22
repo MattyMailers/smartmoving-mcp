@@ -30,3 +30,6 @@ jobs:
 
       - name: Verify
         run: npm run verify
+
+      - name: Package dry-run
+        run: npm pack --dry-run

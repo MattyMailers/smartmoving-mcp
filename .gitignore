@@ -5,3 +5,7 @@ __MACOSX/
 coverage/
 .env
 .env.local
+site/.astro/
+site/dist/
+site/.vercel/
+.hermes/

@@ -5,6 +5,9 @@
 - [Overview](#overview)
 - [Base URL](#base-url)
 - [Authentication](./AUTHENTICATION.md)
+- [CLI Guide](./CLI.md)
+- [Generated CLI Command Index](./commands/README.md)
+- [Safety Profiles](./SAFETY-PROFILES.md)
 - [Endpoint Reference](./ENDPOINTS.md)
 - [Data Schemas](./SCHEMAS.md)
 - [Enumerations](./ENUMS.md)
@@ -59,6 +62,30 @@ All endpoints documented in this reference are relative to this base URL. For ex
 ```
 https://api-public.smartmoving.com/v1/api/ping
 ```
+
+---
+
+## CLI and MCP quickstart
+
+This repository includes two local interfaces built from the same SmartMoving API client:
+
+- **MCP server:** agent-native stdio tool server. Install with [`AGENT-INSTALL.md`](./AGENT-INSTALL.md).
+- **CLI MVP:** explicit terminal commands for humans, scripts, and terminal agents. Start with [`CLI.md`](./CLI.md), inspect generated command docs in [`commands/README.md`](./commands/README.md), and choose a safety mode from [`SAFETY-PROFILES.md`](./SAFETY-PROFILES.md).
+
+Recommended first run from a local clone:
+
+```bash
+cd mcp-server
+npm install
+npm run build
+export SMARTMOVING_API_KEY="replace-with-your-key"
+export SMARTMOVING_ALLOW_WRITES="false"
+node dist/cli.js doctor --json
+node dist/cli.js schema --json
+node dist/cli.js docs generate --json
+```
+
+The generated command index is registry-backed: `smartmoving docs generate` reads the same operation schema exposed by `smartmoving schema --json` and writes `docs/commands/README.md` plus one page per command.
 
 ---
 
@@ -343,7 +370,10 @@ curl -X POST \
 | Document                                  | Description                                               |
 |-------------------------------------------|-----------------------------------------------------------|
 | [Authentication](./AUTHENTICATION.md)     | API key setup, header vs. query parameter, tier access    |
-| [Endpoint Reference](./ENDPOINTS.md)      | Complete reference for all 55 endpoints                   |
+| [CLI Guide](./CLI.md)                      | Local CLI setup, output contract, commands, and safety    |
+| [CLI Command Index](./commands/README.md)  | Generated registry-backed command reference               |
+| [Safety Profiles](./SAFETY-PROFILES.md)    | Read-only, dry-run, guarded write, and destructive modes  |
+| [Endpoint Reference](./ENDPOINTS.md)       | Complete reference for all 55 endpoints                   |
 | [Data Schemas](./SCHEMAS.md)              | All 138 data models with properties and types             |
 | [Enumerations](./ENUMS.md)               | All enum types with integer values and descriptions       |
 | [Workflow Guides](./WORKFLOWS.md)         | Step-by-step guides for common integration patterns       |

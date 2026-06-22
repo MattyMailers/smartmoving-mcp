@@ -32,6 +32,9 @@ smartmoving-api/
 │   ├── AGENT-INSTALL.md
 │   ├── AUTHENTICATION.md
 │   ├── BEST-PRACTICES.md
+│   ├── CLI.md
+│   ├── commands/
+│   ├── SAFETY-PROFILES.md
 │   ├── ENDPOINTS.md
 │   ├── ENUMS.md
 │   ├── OPPORTUNITY-V1-V2-LIMITATIONS.md
@@ -50,10 +53,26 @@ smartmoving-api/
 
 ## Quick start
 
-The easiest public install path is npm/npx:
+The easiest public MCP server install path after maintainers publish to npm is:
 
 ```bash
 npx smartmoving-mcp-server
+```
+
+The same package exposes a `smartmoving` CLI binary for diagnostics and smoke tests. Global install usage after publish:
+
+```bash
+npm install -g smartmoving-mcp-server
+smartmoving init --yes --profile default --api-key-env SMARTMOVING_API_KEY
+smartmoving doctor --json
+smartmoving smoke read --json
+smartmoving smoke write --dry-run --json
+```
+
+For one-off npx CLI runs, npm binary resolution is clearest with `--package`:
+
+```bash
+SMARTMOVING_API_KEY="replace-with-your-key" npx -y --package smartmoving-mcp-server smartmoving doctor --json
 ```
 
 For local development from source:
@@ -70,6 +89,33 @@ npm start
 ```
 
 The server uses stdio, so it is normally launched by an MCP client rather than run manually in a terminal.
+
+## SmartMoving CLI MVP
+
+This repo also includes an **unofficial, safety-gated `smartmoving` CLI MVP** for authorized SmartMoving API users who want terminal commands for local debugging, scripts, and terminal-based agents. It uses the same API client and environment variables as the MCP server, but it is intentionally smaller than the full MCP tool catalog.
+
+MCP vs CLI positioning:
+
+- Use the MCP server for agent-native tool discovery and controlled MCP tool calls.
+- Use the CLI for explicit terminal commands, `--json` output, smoke tests, and shell scripting.
+- The CLI includes guarded read, write, and destructive commands. Writes are blocked unless explicitly enabled, destructive commands require the additional destructive gate plus `--yes`, and dry-run is the recommended first step.
+
+Local CLI test from a clone:
+
+```bash
+cd mcp-server
+npm install
+export SMARTMOVING_API_KEY="your-key-here"
+export SMARTMOVING_ALLOW_WRITES="false"
+npm run build
+node dist/cli.js ping
+node dist/cli.js leads list --page-size 10 --json
+node dist/cli.js reference branches --json
+node dist/cli.js smoke read --json
+node dist/cli.js smoke write --dry-run --json
+```
+
+After a future npm publish, the package exposes a `smartmoving` binary alongside `smartmoving-mcp-server`, but this repository should not be published automatically from a PR. See [`docs/CLI.md`](./docs/CLI.md) for full CLI usage, [`docs/LIVE-TESTING.md`](./docs/LIVE-TESTING.md) for opt-in smoke testing, [`docs/commands/README.md`](./docs/commands/README.md) for generated registry-backed command docs, and [`docs/SAFETY-PROFILES.md`](./docs/SAFETY-PROFILES.md) for safe read/write/destructive modes.
 
 ## Safety modes
 
