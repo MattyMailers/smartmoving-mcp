@@ -66,6 +66,30 @@ Recommended secret pattern:
 - Commit only `.env.example` with placeholders.
 - Rotate the SmartMoving API key immediately if it is ever pasted into GitHub, chat, logs, or screenshots.
 
+## Cursor
+
+See **[`CURSOR-MCP.md`](./CURSOR-MCP.md)** for full Cursor setup: config paths (`~/.cursor/mcp.json` and `.cursor/mcp.json`), npx vs local clone, read-only defaults, write/destructive flags, verification, and troubleshooting.
+
+Quick read-only example:
+
+```json
+{
+  "mcpServers": {
+    "smartmoving": {
+      "type": "stdio",
+      "command": "npx",
+      "args": ["-y", "smartmoving-mcp-server"],
+      "env": {
+        "SMARTMOVING_API_KEY": "replace-with-your-key",
+        "SMARTMOVING_ALLOW_WRITES": "false"
+      }
+    }
+  }
+}
+```
+
+Restart or reload Cursor after editing (`Developer: Reload Window`).
+
 ## Claude Desktop
 
 macOS config path:
