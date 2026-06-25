@@ -30,6 +30,7 @@ smartmoving-api/
 ├── openapi.json
 ├── docs/
 │   ├── AGENT-INSTALL.md
+│   ├── CURSOR-MCP.md
 │   ├── AUTHENTICATION.md
 │   ├── BEST-PRACTICES.md
 │   ├── ENDPOINTS.md
@@ -123,6 +124,7 @@ Matt's local key is stored privately in `~/.hermes/.env`, not in this repo.
 
 Use [`docs/AGENT-INSTALL.md`](./docs/AGENT-INSTALL.md) for copy-paste setup examples for:
 
+- Cursor — see also [`docs/CURSOR-MCP.md`](./docs/CURSOR-MCP.md)
 - Claude Desktop
 - Claude Code
 - Codex-style MCP config
