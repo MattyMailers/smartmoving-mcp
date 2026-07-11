@@ -124,6 +124,7 @@ node dist/cli.js schema --json
 node dist/cli.js docs generate --json
 node dist/cli.js smoke read --json
 node dist/cli.js smoke write --dry-run --json
+node dist/cli.js reports sales-closed --closed-on 2026-07-10 --from-service-date 20260711 --to-service-date 20271231 --timezone-offset -06:00 --json
 node dist/cli.js schema --group leads --json
 node dist/cli.js schema --safety read --json
 node dist/cli.js ping
@@ -229,6 +230,7 @@ smartmoving customers search <query> --json
 smartmoving customers opportunities <customerId> --json
 smartmoving customers storage-accounts <customerId> --json
 smartmoving customers service-tickets <customerId> --json
+smartmoving reports sales-closed --closed-on 2026-07-10 --from-service-date 20260711 --to-service-date 20271231 --timezone-offset -06:00 --json
 smartmoving leads list --page-size 25 --json
 smartmoving leads get <leadId> --json
 smartmoving leads create --input lead.json --dry-run --json

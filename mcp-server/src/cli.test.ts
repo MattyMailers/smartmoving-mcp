@@ -219,6 +219,113 @@ describe("SmartMoving CLI", () => {
     );
   });
 
+  it("reports sales closed from future-service opportunities using audit status changes", async () => {
+    await withMockApi(
+      (request, response) => {
+        const url = request.url ?? "";
+        if (url === "/v1/api/users") {
+          jsonResponse(response, 200, [
+            { id: "rep-1", name: "Nate Evanko" },
+            { id: "rep-2", name: "Eric Anderson" },
+          ]);
+          return;
+        }
+        if (url === "/v1/api/customers?Page=1&PageSize=100&FromServiceDate=20260711&ToServiceDate=20261231&IncludeOpportunityInfo=true") {
+          jsonResponse(response, 200, {
+            pageNumber: 1,
+            pageSize: 100,
+            totalPages: 1,
+            totalResults: 3,
+            totalThisPage: 3,
+            pageResults: [
+              { name: "Future Booked", opportunities: [{ id: "opp-1", quoteNumber: "11576", status: 4, jobs: [{ jobNumber: "11576-1" }] }] },
+              { name: "Booked Outside Window", opportunities: [{ id: "opp-2", quoteNumber: "11577", status: 4, jobs: [{ jobNumber: "11577-1" }] }] },
+              { name: "Still Open", opportunities: [{ id: "opp-3", quoteNumber: "11578", status: 3, jobs: [{ jobNumber: "11578-1" }] }] },
+            ],
+          });
+          return;
+        }
+        if (url === "/v1/api/opportunities/opp-1/audit-activity") {
+          jsonResponse(response, 200, [{ description: "Status changed to Booked from Opportunity.", changeMadeByUserId: "rep-1", createdAtUtc: "2026-07-10T20:04:47.0225452+00:00" }]);
+          return;
+        }
+        if (url === "/v1/api/opportunities/opp-2/audit-activity") {
+          jsonResponse(response, 200, [{ description: "Status changed to Booked from Opportunity.", changeMadeByUserId: "rep-2", createdAtUtc: "2026-07-09T20:04:47.0225452+00:00" }]);
+          return;
+        }
+        if (url === "/v1/api/opportunities/opp-3/audit-activity") {
+          jsonResponse(response, 200, []);
+          return;
+        }
+        if (url === "/v1/api/opportunities/opp-1?IncludeJobs=true&IncludePayments=true") {
+          jsonResponse(response, 200, {
+            id: "opp-1",
+            quoteNumber: 11576,
+            status: 4,
+            serviceDate: 20260730,
+            salesAssignee: { id: "rep-1" },
+            estimatedTotal: { finalTotal: 1532 },
+            jobs: [{ jobNumber: "11576-1" }],
+            referralSource: "Repeat Customer",
+          });
+          return;
+        }
+        jsonResponse(response, 404, { message: `unexpected ${url}` });
+      },
+      async (baseUrl, requests) => {
+        const result = await runCli([
+          "reports",
+          "sales-closed",
+          "--closed-on",
+          "2026-07-10",
+          "--from-service-date",
+          "20260711",
+          "--to-service-date",
+          "20261231",
+          "--timezone-offset",
+          "-06:00",
+          "--json",
+        ], {
+          SMARTMOVING_API_KEY: testApiKey,
+          SMARTMOVING_BASE_URL: baseUrl,
+        });
+
+        expect(result.code).toBe(0);
+        expect(JSON.parse(result.stdout)).toEqual({
+          ok: true,
+          data: {
+            closedOn: "2026-07-10",
+            timezoneOffset: "-06:00",
+            serviceDateRange: { from: "20260711", to: "20261231" },
+            auditedOpportunities: 3,
+            closedOpportunities: 1,
+            closedJobRows: 1,
+            estimatedTotal: 1532,
+            byBookedBy: [{ salesperson: "Nate Evanko", opportunities: 1, jobRows: 1, estimatedTotal: 1532, quotes: ["11576"] }],
+            bySalesAssignee: [{ salesperson: "Nate Evanko", opportunities: 1, jobRows: 1, estimatedTotal: 1532, quotes: ["11576"] }],
+            opportunities: [
+              {
+                quoteNumber: "11576",
+                customerName: "Future Booked",
+                bookedAtUtc: "2026-07-10T20:04:47.0225452+00:00",
+                bookedBy: "Nate Evanko",
+                salesAssignee: "Nate Evanko",
+                jobRows: 1,
+                jobNumbers: ["11576-1"],
+                estimatedTotal: 1532,
+                serviceDate: 20260730,
+                status: 4,
+                referralSource: "Repeat Customer",
+              },
+            ],
+          },
+        });
+        expect(requests.map((request) => request.path)).toContain("/v1/api/users");
+        expect(requests.map((request) => request.path)).toContain("/v1/api/opportunities/opp-1/audit-activity");
+      },
+    );
+  });
+
   it("redacts the API key from error output", async () => {
     await withMockApi(
       (_request, response) => jsonResponse(response, 401, { message: `invalid x-api-key: ${testApiKey}` }),

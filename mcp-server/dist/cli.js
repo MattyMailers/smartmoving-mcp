@@ -53,6 +53,186 @@ function positiveInteger(value, label) {
     }
     return parsed;
 }
+function asRecord(value) {
+    return value && typeof value === "object" && !Array.isArray(value) ? value : {};
+}
+function asArray(value) {
+    return Array.isArray(value) ? value.map(asRecord) : [];
+}
+function asString(value) {
+    return typeof value === "string" ? value : undefined;
+}
+function asNumber(value) {
+    if (typeof value === "number" && Number.isFinite(value)) {
+        return value;
+    }
+    if (typeof value === "string" && value.trim()) {
+        const parsed = Number.parseFloat(value);
+        return Number.isFinite(parsed) ? parsed : 0;
+    }
+    return 0;
+}
+function normalizeIsoWithLongFraction(value) {
+    const match = value.match(/^(.*?\.)(\d{6})\d*(.*)$/);
+    return match ? `${match[1]}${match[2]}${match[3]}` : value;
+}
+function parseUtcDate(value) {
+    const parsed = new Date(normalizeIsoWithLongFraction(value));
+    if (Number.isNaN(parsed.getTime())) {
+        throw new Error(`Invalid date-time from SmartMoving audit: ${value}`);
+    }
+    return parsed;
+}
+function offsetMinutes(offset) {
+    const match = offset.match(/^([+-])(\d{2}):(\d{2})$/);
+    if (!match) {
+        throw new Error("--timezone-offset must look like -06:00 or +00:00.");
+    }
+    const sign = match[1] === "-" ? -1 : 1;
+    return sign * (Number.parseInt(match[2], 10) * 60 + Number.parseInt(match[3], 10));
+}
+function closedWindowUtc(closedOn, timezoneOffset) {
+    if (!/^\d{4}-\d{2}-\d{2}$/.test(closedOn)) {
+        throw new Error("--closed-on must be YYYY-MM-DD.");
+    }
+    const minutes = offsetMinutes(timezoneOffset);
+    const [year, month, day] = closedOn.split("-").map((part) => Number.parseInt(part, 10));
+    const localMidnightAsUtc = Date.UTC(year, month - 1, day, 0, 0, 0);
+    const start = new Date(localMidnightAsUtc - minutes * 60_000);
+    const end = new Date(start.getTime() + 24 * 60 * 60_000);
+    return { start, end };
+}
+function addDays(date, days) {
+    const copy = new Date(date.getTime());
+    copy.setUTCDate(copy.getUTCDate() + days);
+    return copy;
+}
+function yyyymmdd(date) {
+    const year = date.getUTCFullYear();
+    const month = String(date.getUTCMonth() + 1).padStart(2, "0");
+    const day = String(date.getUTCDate()).padStart(2, "0");
+    return `${year}${month}${day}`;
+}
+function summarizeBy(field, opportunities) {
+    const grouped = new Map();
+    for (const opportunity of opportunities) {
+        const salesperson = asString(opportunity[field]) ?? "Unassigned";
+        const existing = grouped.get(salesperson) ?? { salesperson, opportunities: 0, jobRows: 0, estimatedTotal: 0, quotes: [] };
+        existing.opportunities += 1;
+        existing.jobRows += asNumber(opportunity.jobRows);
+        existing.estimatedTotal += asNumber(opportunity.estimatedTotal);
+        const quoteNumber = asString(opportunity.quoteNumber);
+        if (quoteNumber) {
+            existing.quotes.push(quoteNumber);
+        }
+        grouped.set(salesperson, existing);
+    }
+    return Array.from(grouped.values()).sort((a, b) => b.opportunities - a.opportunities || a.salesperson.localeCompare(b.salesperson));
+}
+function sleep(ms) {
+    return new Promise((resolve) => setTimeout(resolve, ms));
+}
+async function reportGet(client, path, queryParams) {
+    let attempt = 0;
+    while (true) {
+        try {
+            return await client.get(path, queryParams);
+        }
+        catch (error) {
+            attempt += 1;
+            const message = formatError(error);
+            const retryAfter = message.match(/Try again in (\d+) seconds/i);
+            if (!message.includes("HTTP 429") || !retryAfter || attempt > 3) {
+                throw error;
+            }
+            await sleep((Number.parseInt(retryAfter[1], 10) + 1) * 1000);
+        }
+    }
+}
+async function runSalesClosedReport(client, options) {
+    const today = new Date();
+    const closedOn = options.closedOn ?? yyyymmdd(addDays(today, -1)).replace(/^(\d{4})(\d{2})(\d{2})$/, "$1-$2-$3");
+    const timezoneOffset = options.timezoneOffset ?? "-06:00";
+    const { start, end } = closedWindowUtc(closedOn, timezoneOffset);
+    const fromServiceDate = options.fromServiceDate ?? yyyymmdd(addDays(start, 1));
+    const toServiceDate = options.toServiceDate ?? `${start.getUTCFullYear() + 1}1231`;
+    const usersRaw = await reportGet(client, "/api/users");
+    const usersResponse = asRecord(usersRaw);
+    const userRows = Array.isArray(usersRaw) ? asArray(usersRaw) : asArray(usersResponse.pageResults);
+    const userNames = new Map(userRows.map((user) => [asString(user.id), asString(user.name) ?? asString(user.email) ?? asString(user.id) ?? "Unknown"]));
+    const customers = [];
+    let page = 1;
+    let totalPages = 1;
+    do {
+        const response = asRecord(await reportGet(client, "/api/customers", {
+            Page: page,
+            PageSize: 100,
+            FromServiceDate: fromServiceDate,
+            ToServiceDate: toServiceDate,
+            IncludeOpportunityInfo: true,
+        }));
+        customers.push(...asArray(response.pageResults));
+        totalPages = asNumber(response.totalPages) || 1;
+        page += 1;
+    } while (page <= totalPages);
+    const seen = new Set();
+    const closed = [];
+    let auditedOpportunities = 0;
+    for (const customer of customers) {
+        for (const summary of asArray(customer.opportunities)) {
+            const opportunityId = asString(summary.id);
+            if (!opportunityId || seen.has(opportunityId)) {
+                continue;
+            }
+            seen.add(opportunityId);
+            auditedOpportunities += 1;
+            const audit = asArray(await reportGet(client, `/api/opportunities/${opportunityId}/audit-activity`));
+            const bookedEvent = audit.find((entry) => {
+                const description = asString(entry.description) ?? "";
+                const createdAtUtc = asString(entry.createdAtUtc);
+                if (!createdAtUtc || !/Status changed to Booked from Opportunity/i.test(description)) {
+                    return false;
+                }
+                const timestamp = parseUtcDate(createdAtUtc);
+                return timestamp >= start && timestamp < end;
+            });
+            if (!bookedEvent) {
+                continue;
+            }
+            const detail = asRecord(await reportGet(client, `/api/opportunities/${opportunityId}`, { IncludeJobs: true, IncludePayments: true }));
+            const estimatedTotal = asNumber(asRecord(detail.estimatedTotal).finalTotal ?? asRecord(detail.estimatedTotal).total ?? asRecord(detail.estimatedTotal).subtotal);
+            const jobs = asArray(detail.jobs ?? summary.jobs);
+            const salesAssignee = asRecord(detail.salesAssignee);
+            const bookedById = asString(bookedEvent.changeMadeByUserId);
+            const salesAssigneeId = asString(salesAssignee.id);
+            closed.push({
+                quoteNumber: String(summary.quoteNumber ?? detail.quoteNumber ?? ""),
+                customerName: asString(customer.name) ?? "Unknown",
+                bookedAtUtc: asString(bookedEvent.createdAtUtc),
+                bookedBy: userNames.get(bookedById) ?? bookedById ?? "Unknown",
+                salesAssignee: userNames.get(salesAssigneeId) ?? asString(salesAssignee.name) ?? asString(salesAssignee.email) ?? salesAssigneeId ?? "Unassigned",
+                jobRows: jobs.length,
+                jobNumbers: jobs.map((job) => asString(job.jobNumber)).filter(Boolean),
+                estimatedTotal,
+                serviceDate: detail.serviceDate ?? summary.serviceDate,
+                status: detail.status ?? summary.status,
+                referralSource: detail.referralSource,
+            });
+        }
+    }
+    return {
+        closedOn,
+        timezoneOffset,
+        serviceDateRange: { from: fromServiceDate, to: toServiceDate },
+        auditedOpportunities,
+        closedOpportunities: closed.length,
+        closedJobRows: closed.reduce((sum, opportunity) => sum + asNumber(opportunity.jobRows), 0),
+        estimatedTotal: closed.reduce((sum, opportunity) => sum + asNumber(opportunity.estimatedTotal), 0),
+        byBookedBy: summarizeBy("bookedBy", closed),
+        bySalesAssignee: summarizeBy("salesAssignee", closed),
+        opportunities: closed,
+    };
+}
 function jsonOption() {
     return new Option("--json", "print machine-readable JSON output");
 }
@@ -507,9 +687,18 @@ for (const [commandName, label, path] of [
 }
 addReadOptions(reference
     .command("tariff-materials")
-    .description("List materials available under a tariff.")
+    .description("List tariff material options.")
     .argument("<tariffId>", "tariff UUID"))
     .action((tariffId, options) => runRead("Tariff materials", options, (client) => client.get(`/api/premium/tariffs/${tariffId}/materials`)));
+const reports = program.command("reports").description("Read operational and sales reports.");
+addReadOptions(reports
+    .command("sales-closed")
+    .description("Summarize opportunities changed to Booked by salesperson for a local date.")
+    .requiredOption("--closed-on <date>", "local close date, YYYY-MM-DD")
+    .requiredOption("--from-service-date <date>", "future service-date scan start, yyyyMMdd")
+    .requiredOption("--to-service-date <date>", "future service-date scan end, yyyyMMdd")
+    .option("--timezone-offset <offset>", "local offset for the close-date window, e.g. -06:00", "-06:00"))
+    .action((options) => runRead("Sales closed", options, (client) => runSalesClosedReport(client, options)));
 const customers = program.command("customers").description("Read customer records.");
 addReadOptions(customers
     .command("list")
