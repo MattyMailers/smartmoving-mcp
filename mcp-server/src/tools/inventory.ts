@@ -35,13 +35,25 @@ export function registerInventoryTools(server: McpServer, client: SmartMovingCli
         masterInventoryItemId: z.string().uuid().describe("Master inventory item ID (use get_master_inventory for valid IDs)"),
         quantity: z.number().int().min(1).describe("How many of this item"),
         notes: z.string().optional().describe("Notes about this specific item (e.g. 'fragile', 'disassemble')"),
+        description: z.string().optional().describe("Master inventory item description"),
+        volume: z.number().min(0).optional().describe("Per-item volume in cubic feet from the master inventory catalog"),
+        weight: z.number().min(0).optional().describe("Per-item weight in pounds from the master inventory catalog"),
       })).min(1).describe("Array of items to add to the room"),
     },
     async (params) => {
       try {
         const result = await client.post(
           `/api/premium/opportunities/${params.opportunityId}/inventory/rooms/${params.roomId}`,
-          { items: params.items },
+          {
+            items: params.items.map((item) => ({
+              id: item.masterInventoryItemId,
+              quantity: item.quantity,
+              notes: item.notes,
+              description: item.description,
+              volume: item.volume,
+              weight: item.weight,
+            })),
+          },
         );
         return { content: [{ type: "text", text: JSON.stringify(result, null, 2) }] };
       } catch (error) {
@@ -53,18 +65,25 @@ export function registerInventoryTools(server: McpServer, client: SmartMovingCli
   // ---------- update_inventory_item ----------
   server.tool(
     "update_inventory_item",
-    "Update an existing inventory item in a room. Premium tier endpoint. Use this to change the quantity or notes for an item already in the inventory.",
+    "Replace an existing inventory item's editable values in a room. Premium tier endpoint. SmartMoving treats this PUT as a full replacement, so quantity, volume, weight, and quantityNotGoing are required to prevent omitted values from resetting to zero.",
     {
       opportunityId: z.string().uuid().describe("The opportunity ID"),
       roomId: z.string().uuid().describe("The room ID containing the item"),
       inventoryItemId: z.string().uuid().describe("The inventory item ID to update"),
-      quantity: z.number().int().min(0).optional().describe("Updated quantity (set to 0 to effectively remove)"),
+      quantity: z.number().int().min(0).describe("Complete updated quantity (set to 0 to effectively remove)"),
       notes: z.string().optional().describe("Updated notes for the item"),
+      volume: z.number().min(0).describe("Complete updated per-item volume in cubic feet"),
+      weight: z.number().min(0).describe("Complete updated per-item weight in pounds"),
+      quantityNotGoing: z.number().int().min(0).describe("Complete quantity excluded from the move"),
     },
     async (params) => {
       try {
-        const body: Record<string, unknown> = {};
-        if (params.quantity !== undefined) body.quantity = params.quantity;
+        const body: Record<string, unknown> = {
+          quantity: params.quantity,
+          volume: params.volume,
+          weight: params.weight,
+          quantityNotGoing: params.quantityNotGoing,
+        };
         if (params.notes !== undefined) body.notes = params.notes;
 
         const result = await client.put(
