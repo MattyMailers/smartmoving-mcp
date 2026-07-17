@@ -1,6 +1,6 @@
 import type { Command } from "commander";
 
-export type AgentWorkflowName = "lead-review" | "daily-brief" | "follow-up-audit";
+export type AgentWorkflowName = "lead-review" | "daily-brief" | "follow-up-audit" | "follow-up-gap-audit";
 
 interface AgentWorkflowExample {
   name: AgentWorkflowName;
@@ -63,6 +63,22 @@ const workflows: AgentWorkflowExample[] = [
       "Use: smartmoving opportunities get <opportunityId> --include-follow-ups --json --wrap-untrusted",
       "Then use: smartmoving followups due --opportunity-id <opportunityId> --json --wrap-untrusted",
       "Summarize overdue, missing, completed, and ambiguous follow-ups. Do not create, update, complete, or delete anything without human approval.",
+    ].join("\n"),
+  },
+  {
+    name: "follow-up-gap-audit",
+    description: "Audit a batch of SmartMoving job or quote numbers without turning lookup failures into false follow-up gaps.",
+    commands: [
+      "smartmoving doctor --json",
+      "smartmoving schema --json",
+      "smartmoving reports follow-up-gaps --input opportunity-by-move-date.csv --json",
+    ],
+    prompt: [
+      "Run smartmoving doctor --json and confirm audit_followup_gaps is present in smartmoving schema --json.",
+      "Run the read-only batch command: smartmoving reports follow-up-gaps --input opportunity-by-move-date.csv --json",
+      "Report no_followups, completed_only, and open_unassigned as follow-up gaps.",
+      "Keep invalid_input, not_found, and api_error separate. Do not report lookup failures as missing follow-ups.",
+      "Do not create, update, complete, or delete anything.",
     ].join("\n"),
   },
 ];
@@ -152,7 +168,7 @@ export function registerAgentCommand(
   agent
     .command("prompt")
     .description("Print a workflow-specific prompt for coding or terminal agents.")
-    .requiredOption("--workflow <name>", "workflow name: lead-review, daily-brief, or follow-up-audit")
+    .requiredOption("--workflow <name>", "workflow name: lead-review, daily-brief, follow-up-audit, or follow-up-gap-audit")
     .action((options: { workflow: string }) => {
       try {
         console.log(agentPrompt(options.workflow));

@@ -113,7 +113,7 @@ Dry-runs return request metadata and do not call SmartMoving:
 
 ## Schema for agents
 
-`smartmoving schema --json` prints registry metadata for all 62 operations. Agents should use it to discover:
+`smartmoving schema --json` prints registry metadata for all 63 operations. Agents should use it to discover:
 
 - operation name and group;
 - safety level: read, write, or destructive;

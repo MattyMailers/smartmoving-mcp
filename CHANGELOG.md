@@ -8,6 +8,9 @@ This project uses semantic versioning while the public API is stabilizing.
 
 ### Added
 
+- Read-only `audit_followup_gaps` MCP tool and `smartmoving reports follow-up-gaps` CLI workflow for up to 1,000 SmartMoving job/quote rows.
+- CSV ingestion for Opportunity by Move Date exports with explicit classification of gaps, invalid input, not-found records, and API failures.
+- Bounded concurrency, deduplication, transient retry handling, and SmartMoving-specific HTTP 400 not-found handling.
 - Read-only-by-default safety model for write/destructive SmartMoving operations.
 - `SMARTMOVING_ALLOW_WRITES=true` gate for POST, PUT, and PATCH requests.
 - `SMARTMOVING_ALLOW_DESTRUCTIVE=true` gate for DELETE requests.

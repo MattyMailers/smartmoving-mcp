@@ -39,6 +39,7 @@ SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js leads list --page-s
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js opportunities get OPPORTUNITY_UUID --json
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js jobs get JOB_UUID --opportunity-id OPPORTUNITY_UUID --json
 SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js followups due --opportunity-id OPPORTUNITY_UUID --json
+SMARTMOVING_API_KEY="replace-with-your-key" node dist/cli.js reports follow-up-gaps --job-numbers "90001-1,90002-1" --json
 ```
 
 The CLI includes read commands plus guarded write/destructive commands. SmartMoving's documented v1 job detail and follow-up endpoints require an opportunity ID, so those commands ask for `--opportunity-id`.
@@ -115,7 +116,7 @@ npm run verify
 
 This runs TypeScript build, mocked tests, and high-severity npm audit.
 
-## Available tools, 62 total
+## Available tools, 63 total
 
 ### Customer tools, 8
 
@@ -174,8 +175,9 @@ This runs TypeScript build, mocked tests, and high-severity npm audit.
 - `get_master_inventory`: Get master inventory catalog. Premium.
 - `get_room_types`: Get room types. Premium.
 
-### Follow-up tools, 6
+### Follow-up tools, 7
 
+- `audit_followup_gaps`: Read-only batch audit for missing active assigned follow-ups, with explicit invalid/not-found/API-error classifications.
 - `list_followups`: List follow-ups. Premium.
 - `get_followup`: Get a follow-up. Premium.
 - `create_followup`: Schedule a follow-up. Premium.

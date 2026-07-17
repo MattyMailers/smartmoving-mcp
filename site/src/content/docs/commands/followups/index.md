@@ -9,6 +9,7 @@ Generated from [schema.json](/schema.json). Start agents with `smartmoving docto
 
 | Command | Safety | Docs | Description |
 | --- | --- | --- | --- |
+| `smartmoving reports follow-up-gaps` | READ | [Reference](/commands/followups/audit-followup-gaps/) | Audit up to 1,000 job or quote numbers for missing active assigned follow-ups while keeping invalid, not-found, and API-error rows separate. |
 | `smartmoving followups list` | READ | [Reference](/commands/followups/list/) | List all follow-ups for an opportunity. Premium tier endpoint. Follow-ups are scheduled tasks like callbacks, emails to send, or in-home estimates. Returns both pending and completed follow-ups. |
 | `smartmoving followups get` | READ | [Reference](/commands/followups/get/) | Get details of a specific follow-up. Premium tier endpoint. Returns full information including type, due date, assigned user, completion status, and notes. |
 | `smartmoving followups create` | WRITE | [Reference](/commands/followups/create/) | Create a new follow-up task on an OPPORTUNITY. SmartMoving does not support lead-level follow-ups through this endpoint: convert the lead to an opportunity first. Use this to schedule a callback, email, text, or in-home estimate. Types: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET. Required API field names are type, title, assignedToId, and dueDateTime. |

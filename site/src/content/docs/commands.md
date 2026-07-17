@@ -1,6 +1,6 @@
 ---
 title: Commands index
-description: Generated command reference entry point for the 62-operation SmartMoving CLI/MCP registry.
+description: Generated command reference entry point for the 63-operation SmartMoving CLI/MCP registry.
 ---
 
 # SmartMoving command reference

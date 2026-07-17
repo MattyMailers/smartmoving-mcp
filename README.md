@@ -8,14 +8,14 @@ Current status: public `0.1.0` launch. Production-used internally at iHaul iMove
 
 ## What it can do
 
-The server currently registers **62 MCP tools** across eight areas:
+The server currently registers **63 MCP tools** across eight areas:
 
 - **Customers:** list, get, search, create, update, customer opportunities, storage accounts, service tickets
 - **Leads:** list, get, create, update, patch, salesperson lead lookup, convert to opportunity, lead statuses
 - **Opportunities:** get by ID or quote number, create, update, audit activity, documents, payments, attachments, rooms
 - **Jobs:** list by opportunity, get detailed job, create, delete, confirm, notes, stops, estimated materials
 - **Inventory:** opportunity inventory, room items, master inventory, room types, submit review
-- **Follow-ups:** list, get, create, update, delete, complete
+- **Follow-ups:** batch gap audit, list, get, create, update, delete, complete
 - **Communication:** log calls, log notes
 - **Reference data:** branches, move sizes, referral sources, service types, tariffs, tariff materials, users, arrival windows, reasons, ping
 
@@ -66,9 +66,12 @@ npm install -g smartmoving-mcp-server
 smartmoving init
 smartmoving doctor --json
 smartmoving schema --json
+smartmoving reports follow-up-gaps --job-numbers "90001-1,90002-1" --json
 smartmoving smoke read --json
 smartmoving smoke write --dry-run --json
 ```
+
+See [Follow-up Gap Audit](docs/FOLLOWUP-GAP-AUDIT.md) for the CSV workflow, classification contract, deduplication semantics, and failure handling.
 
 For one-off npx CLI runs, npm binary resolution is clearest with `--package`:
 

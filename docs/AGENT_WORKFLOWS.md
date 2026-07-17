@@ -27,6 +27,7 @@ smartmoving agent examples --json
 smartmoving agent prompt --workflow lead-review
 smartmoving agent prompt --workflow daily-brief
 smartmoving agent prompt --workflow follow-up-audit
+smartmoving agent prompt --workflow follow-up-gap-audit
 smartmoving agent quickstart --print-hermes
 smartmoving agent quickstart --print-claude
 ```

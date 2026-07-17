@@ -46,13 +46,13 @@ smartmoving jobs get <jobId> --opportunity-id <opportunityId> --json
 smartmoving followups due --opportunity-id <opportunityId> --json
 ```
 
-The MCP server exposes 62 tools:
+The MCP server exposes 63 tools:
 
 | Group | Count |
 | --- | ---: |
 | communication | 2 |
 | customers | 8 |
-| followups | 6 |
+| followups | 7 |
 | inventory | 7 |
 | jobs | 10 |
 | leads | 8 |
@@ -63,7 +63,7 @@ The MCP server exposes 62 tools:
 
 1. One package, two great interfaces: CLI and MCP.
 2. CLI and MCP share one operation registry.
-3. CLI eventually exposes all 62 MCP tools as commands.
+3. CLI eventually exposes all 63 MCP tools as commands.
 4. `--json` prints stable machine-readable stdout only.
 5. Human progress, warnings, and prompts go to stderr.
 6. Read-only commands work by default.
@@ -223,4 +223,4 @@ smartmoving mcp config --print-hermes
 
 And an AI agent can report:
 
-> I discovered 62 SmartMoving operations. Writes are disabled. Destructive operations are disabled. I can read leads, customers, opportunities, jobs, inventory, follow-ups, reference data, and communication records. To mutate data, enable writes explicitly and approve a dry-run first.
+> I discovered 63 SmartMoving operations. Writes are disabled. Destructive operations are disabled. I can read leads, customers, opportunities, jobs, inventory, follow-ups, reference data, and communication records. To mutate data, enable writes explicitly and approve a dry-run first.

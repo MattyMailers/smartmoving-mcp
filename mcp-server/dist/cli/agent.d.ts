@@ -1,5 +1,5 @@
 import type { Command } from "commander";
-export type AgentWorkflowName = "lead-review" | "daily-brief" | "follow-up-audit";
+export type AgentWorkflowName = "lead-review" | "daily-brief" | "follow-up-audit" | "follow-up-gap-audit";
 export declare function agentSafetyContract(): unknown;
 export declare function agentExamplesContract(): unknown;
 export declare function agentPrompt(workflowName: string): string;

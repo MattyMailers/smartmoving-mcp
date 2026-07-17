@@ -13,6 +13,8 @@ import { runDoctor } from "./cli/doctor.js";
 import { formatError, formatHuman, formatJson } from "./cli/format.js";
 import { registerSmokeCommand } from "./cli/smoke.js";
 import { registerSchemaCommand } from "./operations/register-cli.js";
+import { jobNumbersFromCsv } from "./workflows/followup-gap-input.js";
+import { runFollowupGapAudit } from "./workflows/followup-gap-audit.js";
 
 interface GlobalOptions {
   json?: boolean;
@@ -53,6 +55,13 @@ interface SalesClosedReportOptions extends GlobalOptions {
   fromServiceDate?: string;
   toServiceDate?: string;
   timezoneOffset?: string;
+}
+
+interface FollowupGapReportOptions extends GlobalOptions {
+  input?: string;
+  jobNumbers?: string;
+  jobNumberColumn?: string;
+  concurrency?: string;
 }
 
 interface JobGetOptions extends GlobalOptions {
@@ -871,6 +880,40 @@ addReadOptions(reference
   );
 
 const reports = program.command("reports").description("Read operational and sales reports.");
+
+async function followupGapInputs(options: FollowupGapReportOptions): Promise<string[]> {
+  const jobNumbers: string[] = [];
+  if (options.input) {
+    const csv = await readFile(options.input, "utf8");
+    jobNumbers.push(...jobNumbersFromCsv(csv, options.jobNumberColumn));
+  }
+  if (options.jobNumbers) {
+    jobNumbers.push(...options.jobNumbers.split(/[,\n]/).map((value) => value.trim()).filter(Boolean));
+  }
+  if (jobNumbers.length === 0) throw new Error("Provide --input <csv> or --job-numbers <comma-separated values>.");
+  return jobNumbers;
+}
+
+function followupGapConcurrency(value: string): number {
+  if (!/^\d+$/.test(value)) throw new Error("--concurrency must be an integer from 1 to 10.");
+  const parsed = Number(value);
+  if (!Number.isInteger(parsed) || parsed < 1 || parsed > 10) throw new Error("--concurrency must be an integer from 1 to 10.");
+  return parsed;
+}
+
+addReadOptions(reports
+  .command("follow-up-gaps")
+  .description("Audit job or quote numbers for missing active assigned follow-ups. Read-only.")
+  .option("--input <csv>", "Opportunity by Move Date CSV export")
+  .option("--job-numbers <numbers>", "comma-separated SmartMoving job or quote numbers")
+  .option("--job-number-column <name>", "CSV column containing job or quote numbers; auto-detected when omitted")
+  .option("--concurrency <count>", "simultaneous quote audits, 1-10", "4"))
+  .action((options: FollowupGapReportOptions) =>
+    runRead("Follow-up gaps", options, async (client) => {
+      const jobNumbers = await followupGapInputs(options);
+      return runFollowupGapAudit(client, { jobNumbers, concurrency: followupGapConcurrency(options.concurrency ?? "4") });
+    }),
+  );
 
 addReadOptions(reports
   .command("sales-closed")

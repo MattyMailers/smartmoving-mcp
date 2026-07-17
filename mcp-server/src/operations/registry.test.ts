@@ -5,8 +5,14 @@ const validGroups = new Set(["customers", "leads", "opportunities", "jobs", "inv
 const validSafety = new Set(["read", "write", "destructive"]);
 
 describe("operation registry", () => {
-  it("contains metadata for the existing 62 MCP tools", () => {
-    expect(operationRegistry).toHaveLength(62);
+  it("contains metadata for the existing 62 endpoint tools plus the batch follow-up audit", () => {
+    expect(operationRegistry).toHaveLength(63);
+    expect(operationRegistry).toContainEqual(expect.objectContaining({
+      name: "audit_followup_gaps",
+      group: "followups",
+      safety: "read",
+      cli: expect.objectContaining({ command: "reports follow-up-gaps" }),
+    }));
   });
 
   it("has unique operation names and CLI commands", () => {

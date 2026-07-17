@@ -124,6 +124,7 @@ node dist/cli.js schema --json
 node dist/cli.js docs generate --json
 node dist/cli.js smoke read --json
 node dist/cli.js smoke write --dry-run --json
+node dist/cli.js reports follow-up-gaps --input opportunity-by-move-date.csv --job-number-column "Job Number" --json
 node dist/cli.js reports sales-closed --closed-on 2026-07-10 --from-service-date 20260711 --to-service-date 20271231 --timezone-offset -06:00 --json
 node dist/cli.js schema --group leads --json
 node dist/cli.js schema --safety read --json
@@ -274,7 +275,7 @@ smartmoving communication call --input call.json --dry-run --json
 
 Notes:
 
-- `schema --json` prints the shared operation registry contract for all 62 MCP tools without requiring an API key. It includes each operation name, group, safety level, CLI metadata, MCP tool name, output modes, and stable exit codes.
+- `schema --json` prints the shared operation registry contract for all 63 MCP tools without requiring an API key. It includes each operation name, group, safety level, CLI metadata, MCP tool name, output modes, and stable exit codes.
 - Use `schema --group <group> --json` or `schema --safety <read|write|destructive> --json` to filter schema output for agents and command generators.
 - `jobs get` requires the parent opportunity ID because the SmartMoving v1 Premium job detail endpoint is nested under an opportunity.
 - `followups list`, `followups get`, and `followups due` are scoped to one opportunity because the current SmartMoving v1 API surface does not expose an account-wide due-followups endpoint.

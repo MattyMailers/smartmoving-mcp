@@ -95,4 +95,4 @@ Ask the agent:
 Ping the SmartMoving MCP server, then list the available SmartMoving tools. Do not make any write calls.
 ```
 
-Expected result: `ping` succeeds and tool discovery shows roughly 62 tools.
+Expected result: `ping` succeeds and tool discovery shows roughly 63 tools.

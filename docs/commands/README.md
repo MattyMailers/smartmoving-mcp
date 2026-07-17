@@ -84,6 +84,7 @@ The SmartMoving CLI is an unofficial, safety-gated terminal interface for author
 
 ## followups
 
+- [READ] `smartmoving reports follow-up-gaps` — [docs](./reports/follow-up-gaps.md) — Audit up to 1000 SmartMoving job or quote numbers for an active assigned follow-up. Normalizes job-number suffixes, deduplicates quote lookups, and keeps missing follow-ups separate from invalid input, not-found records, and API errors.
 - [READ] `smartmoving followups list` — [docs](./followups/list.md) — List all follow-ups for an opportunity. Premium tier endpoint. Follow-ups are scheduled tasks like callbacks, emails to send, or in-home estimates. Returns both pending and completed follow-ups.
 - [READ] `smartmoving followups get` — [docs](./followups/get.md) — Get details of a specific follow-up. Premium tier endpoint. Returns full information including type, due date, assigned user, completion status, and notes.
 - [WRITE] `smartmoving followups create` — [docs](./followups/create.md) — Create a new follow-up task on an OPPORTUNITY. SmartMoving does not support lead-level follow-ups through this endpoint: convert the lead to an opportunity first. Use this to schedule a callback, email, text, or in-home estimate. Types: 0=Email, 1=Call, 2=Text, 3=Other, 4=CMET. Required API field names are type, title, assignedToId, and dueDateTime.
